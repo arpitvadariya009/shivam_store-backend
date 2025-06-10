@@ -8,6 +8,7 @@ exports.createUser = async (req, res) => {
         const existingUser = await User.findOne({ mobile });
         if (existingUser) {
             return res.status(203).json({
+                success: false,
                 message: 'User already exist',
                 data: existingUser
             });
@@ -22,7 +23,7 @@ exports.createUser = async (req, res) => {
             data: user
         });
     } catch (error) {
-        res.status(500).json({ message: 'Registration failed', error: error.message });
+        res.status(500).json({ success: false, message: 'Registration failed', error: error.message });
     }
 };
 
@@ -32,19 +33,20 @@ exports.loginUser = async (req, res) => {
 
         const user = await User.findOne({ mobile });
         if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(404).json({ success: false, message: 'User not found' });
         }
 
         const isMatch = await bcrypt.compare(pin, user.pin);
         if (!isMatch) {
-            return res.status(401).json({ message: 'Invalid credentials' });
+            return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
 
         res.status(200).json({
+            success: true,
             message: 'Login successful',
             data: user
         });
     } catch (error) {
-        res.status(500).json({ message: 'Login failed', error: error.message });
+        res.status(500).json({ success: false, message: 'Login failed', error: error.message });
     }
 };

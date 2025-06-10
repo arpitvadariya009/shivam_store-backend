@@ -32,10 +32,10 @@ exports.createProducts = async (req, res) => {
             results.push(newProduct);
         }
 
-        res.status(201).json({ message: 'Products created', data: results });
+        res.status(201).json({ success: true, message: 'Products created', data: results });
     } catch (err) {
         console.log(err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ success: false, error: err.message });
     }
 };
 
@@ -44,12 +44,13 @@ exports.getProductsBySubCategoryId = async (req, res) => {
         const { subCategoryId } = req.query;
 
         if (!subCategoryId) {
-            return res.status(400).json({ error: 'subCategoryId is required' });
+            return res.status(400).json({ success: false, error: 'subCategoryId is required' });
         }
 
         const products = await Product.find({ subCategoryId }).select('code image')
 
         res.status(200).json({
+            success: true,
             message: 'Products fetched successfully',
             data: products
         });
@@ -64,22 +65,23 @@ exports.getSingleProduct = async (req, res) => {
         const { productId } = req.query;
 
         if (!productId) {
-            return res.status(400).json({ error: 'productId is required' });
+            return res.status(400).json({ success: false, error: 'productId is required' });
         }
 
         const product = await Product.findById(productId);
 
         if (!product) {
-            return res.status(404).json({ error: 'Product not found' });
+            return res.status(404).json({ success: false, error: 'Product not found' });
         }
 
         res.status(200).json({
+            success: true,
             message: 'Product fetched successfully',
             data: product
         });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ success: false, error: err.message });
     }
 };
 
@@ -88,30 +90,49 @@ exports.addToOrder = async (req, res) => {
     try {
         const { userId, productCode, variantName, increment = 1 } = req.body;
 
-        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const today = new Date().toISOString().split('T')[0];
 
         let order = await Order.findOne({ userId, date: today });
 
         if (!order) {
+            if (increment <= 0) {
+                return res.status(400).json({ success: false, message: "Cannot decrement item that doesn't exist." });
+            }
             order = new Order({ userId, date: today, items: [] });
         }
 
-        const existingItem = order.items.find(
+        const existingItemIndex = order.items.findIndex(
             (item) => item.productCode === productCode && item.variantName === variantName
         );
 
-        if (existingItem) {
-            existingItem.quantity += increment;
+        if (existingItemIndex > -1) {
+            order.items[existingItemIndex].quantity += increment;
+
+            // If quantity drops to 0 or below, remove the item
+            if (order.items[existingItemIndex].quantity <= 0) {
+                order.items.splice(existingItemIndex, 1);
+            }
         } else {
-            order.items.push({ productCode, variantName, quantity: increment });
+            if (increment > 0) {
+                order.items.push({ productCode, variantName, quantity: increment });
+            } else {
+                return res.status(400).json({ success: false, message: "Cannot decrement non-existing item." });
+            }
+        }
+
+        // If all items are removed and no items left, optionally delete order
+        if (order.items.length === 0) {
+            await Order.deleteOne({ _id: order._id });
+            return res.status(200).json({ success: false, message: 'Order deleted as no items remain.' });
         }
 
         await order.save();
-        res.status(200).json({ message: 'Order updated', order });
+        res.status(200).json({ success: true, message: 'Order updated', order });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ success: false, error: err.message });
     }
 };
+
 
 exports.getOrdersGrouped = async (req, res) => {
     try {
@@ -156,8 +177,8 @@ exports.getOrdersGrouped = async (req, res) => {
                 };
             });
 
-        res.status(200).json({ message: 'Grouped orders', data: result });
+        res.status(200).json({ success: true, message: 'Grouped orders', data: result });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ success: false, error: err.message });
     }
 };
