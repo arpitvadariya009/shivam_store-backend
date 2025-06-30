@@ -9,7 +9,11 @@ const userSchema = new mongoose.Schema({
     isverified: {
         type: Boolean,
         default: false
-    }
+    },
+    userType: {
+        type: Number,
+        defult: 0,
+    },
 }, {
     timestamps: true
 });

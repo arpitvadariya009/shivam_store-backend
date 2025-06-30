@@ -10,6 +10,7 @@ const orderSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     date: { type: String, required: true }, // format: YYYY-MM-DD
     items: [itemSchema],
+    status: { type: Number, defult: 0 },
     createdAt: { type: Date, default: Date.now }
 });
 

@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { createProducts, addToOrder, getOrdersGrouped, getProductsBySubCategoryId, getSingleProduct } = require('../Controller/productController');
+const { createProducts, addToOrder, getOrdersGrouped, getProductsBySubCategoryId, getSingleProduct, updateOrderStatus } = require('../Controller/productController');
 
 // ✅ Multer Setup
 const storage = multer.diskStorage({
@@ -23,5 +23,6 @@ router.post('/add-to-order', addToOrder);
 router.get('/grouped-orders', getOrdersGrouped);
 router.get('/get/products', getProductsBySubCategoryId);
 router.get('/product', getSingleProduct);
+router.put('/update/order', updateOrderStatus);
 
 module.exports = router;

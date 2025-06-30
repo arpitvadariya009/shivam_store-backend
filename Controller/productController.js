@@ -182,3 +182,26 @@ exports.getOrdersGrouped = async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 };
+
+exports.updateOrderStatus = async (req, res) => {
+    try {
+        const { orderId, status } = req.body;
+
+        if (!orderId || !status) {
+            return res.status(400).json({ success: false, message: "Order ID and status are required." });
+        }
+
+        const order = await Order.findById(orderId);
+
+        if (!order) {
+            return res.status(404).json({ success: false, message: "Order not found." });
+        }
+
+        order.status = status;
+        await order.save();
+
+        res.status(200).json({ success: true, message: "Order status updated successfully.", order });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+};
