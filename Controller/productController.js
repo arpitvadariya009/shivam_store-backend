@@ -146,25 +146,29 @@ exports.getOrdersGrouped = async (req, res) => {
             const date = order.date;
 
             if (!groupedByDate[date]) {
-                groupedByDate[date] = {};
+                groupedByDate[date] = {
+                    id: order._id,   // First order's id for that date
+                    status: order.status || "0",
+                    products: {}
+                };
             }
 
             for (const item of order.items) {
                 const key = item.productCode;
 
-                if (!groupedByDate[date][key]) {
-                    groupedByDate[date][key] = {};
+                if (!groupedByDate[date].products[key]) {
+                    groupedByDate[date].products[key] = {};
                 }
 
-                groupedByDate[date][key][item.variantName] =
-                    (groupedByDate[date][key][item.variantName] || 0) + item.quantity;
+                groupedByDate[date].products[key][item.variantName] =
+                    (groupedByDate[date].products[key][item.variantName] || 0) + item.quantity;
             }
         }
 
         const result = Object.keys(groupedByDate)
             .sort((a, b) => new Date(b) - new Date(a)) // latest date first
             .map((date) => {
-                const products = Object.entries(groupedByDate[date]).map(([code, variants]) => {
+                const productsArr = Object.entries(groupedByDate[date].products).map(([code, variants]) => {
                     const variantStr = Object.entries(variants)
                         .map(([v, qty]) => `${v} - ${qty}`)
                         .join(' / ');
@@ -172,8 +176,10 @@ exports.getOrdersGrouped = async (req, res) => {
                 });
 
                 return {
+                    id: groupedByDate[date].id,
                     date,
-                    products,
+                    status: groupedByDate[date].status,
+                    products: productsArr,
                 };
             });
 
@@ -182,6 +188,7 @@ exports.getOrdersGrouped = async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 };
+
 
 exports.updateOrderStatus = async (req, res) => {
     try {
