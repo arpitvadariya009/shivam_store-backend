@@ -6,14 +6,17 @@ const userSchema = new mongoose.Schema({
     city: String,
     mobile: String,
     pin: String,
+    userName: String,
     isverified: {
         type: Boolean,
         default: false
     },
     userType: {
         type: Number,
-        defult: 0,
+        default: 0
     },
+    latitude: Number,
+    longitude: Number,
 }, {
     timestamps: true
 });

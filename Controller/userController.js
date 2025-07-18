@@ -50,3 +50,39 @@ exports.loginUser = async (req, res) => {
         res.status(500).json({ success: false, message: 'Login failed', error: error.message });
     }
 };
+
+exports.updateUser = async (req, res) => {
+    try {
+        const { userId } = req.query;
+        const updateData = req.body;
+
+        if (updateData.pin) {
+            updateData.pin = await bcrypt.hash(updateData.pin, 10);
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            updateData,
+            { new: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'User updated successfully',
+            data: updatedUser
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Update failed',
+            error: error.message
+        });
+    }
+};
