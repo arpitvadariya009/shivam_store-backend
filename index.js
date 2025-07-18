@@ -35,12 +35,13 @@ const user = require('./Router/userRoutes');
 const category = require('./Router/categoryRoutes');
 const subCategory = require('./Router/subCategoryRoutes');
 const product = require('./Router/productRoutes');
+const favorite = require('./Router/favoriteRoutes');
 
 app.use('/api/v1', user);
 app.use('/api/v1', category);
 app.use('/api/v1', subCategory);
 app.use('/api/v1', product);
-
+app.use('/api/v1', favorite);
 
 
 // server connections
