@@ -14,6 +14,7 @@ const productSchema = new mongoose.Schema({
         required: true
     },
     image: { type: String },
+    type: { type: Number, default: 0 },
     setSize: { type: Number, required: true },
     variants: [variantSchema],
     createdAt: { type: Date, default: Date.now }

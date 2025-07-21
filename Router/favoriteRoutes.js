@@ -4,10 +4,12 @@ const upload = require("../middleware/fileUpload")
 
 const {
     createFavorite,
-    getFavorite
+    getFavorite,
+    deleteFavorite
 } = require('../Controller/favoriteController');
 
 router.post('/createFavorite', createFavorite);
 router.get('/getFavorite', getFavorite);
+router.delete('/deleteFavorite', deleteFavorite);
 
 module.exports = router;

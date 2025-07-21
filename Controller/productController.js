@@ -1,7 +1,7 @@
 const Product = require('../models/productModel');
 const Cart = require('../models/cartModel');
 const Order = require('../models/orderModel');
-
+const Favorite = require('../models/favoriteModel');
 exports.createProducts = async (req, res) => {
     try {
         const productArray = JSON.parse(req.body.products);
@@ -44,28 +44,46 @@ exports.createProducts = async (req, res) => {
         });
     }
 };
-
-
 exports.getProductsBySubCategoryId = async (req, res) => {
     try {
-        const { subCategoryId } = req.query;
+        const { subCategoryId, userId } = req.query;
 
         if (!subCategoryId) {
             return res.status(400).json({ success: false, error: 'subCategoryId is required' });
         }
 
-        const products = await Product.find({ subCategoryId }).select('code image')
+        // Fetch all products of the subcategory
+        const products = await Product.find({ subCategoryId });
+
+        let favoriteProductIds = [];
+
+        if (userId) {
+            // Get favorite products for the user
+            const favorites = await Favorite.find({ userId }).select('productId');
+            favoriteProductIds = favorites.map(fav => fav.productId.toString());
+        }
+
+        // Add isFavorite field to each product
+        const updatedProducts = products.map(product => {
+            const isFavorite = favoriteProductIds.includes(product._id.toString());
+            return {
+                ...product.toObject(),
+                isFavorite
+            };
+        });
 
         res.status(200).json({
             success: true,
             message: 'Products fetched successfully',
-            data: products
+            data: updatedProducts
         });
+
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: err.message });
     }
 };
+
 
 exports.getSingleProduct = async (req, res) => {
     try {
@@ -92,11 +110,9 @@ exports.getSingleProduct = async (req, res) => {
     }
 };
 
-
-exports.addToOrder = async (req, res) => {
+exports.addToCart = async (req, res) => {
     try {
         const { userId, productId, productCode, variantName, increment = 1 } = req.body;
-
         const today = new Date().toISOString().split('T')[0];
 
         let cart = await Cart.findOne({ userId, date: today });
@@ -105,7 +121,7 @@ exports.addToOrder = async (req, res) => {
             if (increment <= 0) {
                 return res.status(400).json({ success: false, message: "Cannot decrement item that doesn't exist." });
             }
-            cart = new Cart({ userId, date: today, items: [] });
+            cart = new Cart({ userId, date: today, items: [], totalQuantity: 0 });
         }
 
         const existingItemIndex = cart.items.findIndex(
@@ -113,41 +129,43 @@ exports.addToOrder = async (req, res) => {
         );
 
         if (existingItemIndex > -1) {
-            cart.items[existingItemIndex].quantity += increment;
+            const newQty = cart.items[existingItemIndex].quantity + increment;
 
-            // If quantity drops to 0 or below, remove the item
-            if (cart.items[existingItemIndex].quantity <= 0) {
+            if (newQty <= 0) {
+                cart.totalQuantity -= cart.items[existingItemIndex].quantity;
                 cart.items.splice(existingItemIndex, 1);
+            } else {
+                cart.totalQuantity += increment;
+                cart.items[existingItemIndex].quantity = newQty;
             }
         } else {
             if (increment > 0) {
                 cart.items.push({ productId, productCode, variantName, quantity: increment });
+                cart.totalQuantity += increment;
             } else {
                 return res.status(400).json({ success: false, message: "Cannot decrement non-existing item." });
             }
         }
 
-        // If all items are removed and no items left, optionally delete order
         if (cart.items.length === 0) {
             await Cart.deleteOne({ _id: cart._id });
-            return res.status(200).json({ success: false, message: 'Order deleted as no items remain.' });
+            return res.status(200).json({ success: false, message: 'Cart deleted as no items remain.' });
         }
 
         await cart.save();
-        res.status(200).json({ success: true, message: 'Order updated', order });
+        res.status(200).json({ success: true, message: 'Cart updated', cart });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
 };
 
-// POST /cart/update
 exports.updateCartItem = async (req, res) => {
     try {
-        const { userId, productCode, variantName, quantity } = req.body;
+        const { userId, productCode, variantName, increment = 1 } = req.body;
         const today = new Date().toISOString().split('T')[0];
 
-        if (quantity < 0) {
-            return res.status(400).json({ success: false, message: "Quantity cannot be negative." });
+        if (increment === 0) {
+            return res.status(400).json({ success: false, message: "Increment cannot be zero." });
         }
 
         const cart = await Cart.findOne({ userId, date: today });
@@ -163,10 +181,16 @@ exports.updateCartItem = async (req, res) => {
             return res.status(404).json({ success: false, message: "Item not found in cart." });
         }
 
-        if (quantity === 0) {
+        const currentQty = cart.items[itemIndex].quantity;
+        const newQty = currentQty + increment;
+
+        if (newQty <= 0) {
+            // Remove the item
+            cart.totalQuantity -= currentQty;
             cart.items.splice(itemIndex, 1);
         } else {
-            cart.items[itemIndex].quantity = quantity;
+            cart.items[itemIndex].quantity = newQty;
+            cart.totalQuantity += increment;
         }
 
         if (cart.items.length === 0) {
@@ -175,12 +199,29 @@ exports.updateCartItem = async (req, res) => {
         }
 
         await cart.save();
-        res.status(200).json({ success: true, message: "Cart updated.", cart });
+        res.status(200).json({ success: true, message: "Cart item updated via increment.", cart });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
 };
 
+exports.getCart = async (req, res) => {
+    try {
+        const { userId } = req.query;
+        const today = new Date().toISOString().split('T')[0];
+
+        const cart = await Cart.findOne({ userId, date: today })
+            .populate('items.productId'); // populate full product details
+
+        if (!cart) {
+            return res.status(404).json({ success: false, message: "Cart not found." });
+        }
+
+        res.status(200).json({ success: true, cart });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+};
 
 exports.getOrdersGrouped = async (req, res) => {
     try {

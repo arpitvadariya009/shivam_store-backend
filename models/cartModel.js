@@ -9,10 +9,10 @@ const itemSchema = new mongoose.Schema({
 
 const CartSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
     date: { type: String, required: true },
     items: [itemSchema],
-    status: { type: Number, defult: 0 },
+    totalQuantity: { type: Number, default: 0 },
+    status: { type: Number, default: 0 },
     createdAt: { type: Date, default: Date.now }
 });
 
