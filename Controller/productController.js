@@ -218,30 +218,39 @@ exports.getCart = async (req, res) => {
 
         const productMap = {};
 
-        // Loop through cart items
         for (const item of cart.items) {
             const product = item.productId;
             if (!product) continue;
 
             const productIdStr = product._id.toString();
 
-            // Initialize product in map
+            // Initialize if not already in the map
             if (!productMap[productIdStr]) {
                 productMap[productIdStr] = {
                     productId: {
-                        ...product.toObject(),
-                        variants: product.variants.map(variant => ({
-                            ...variant,
-                            quantity: 0 // default quantity
+                        _id: product._id,
+                        code: product.code,
+                        subCategoryId: product.subCategoryId,
+                        image: product.image,
+                        type: product.type,
+                        setSize: product.setSize,
+                        createdAt: product.createdAt,
+                        __v: product.__v,
+                        variants: product.variants.map(v => ({
+                            _id: v._id,
+                            name: v.name,
+                            available: v.available,
+                            quantity: 0 // initialize quantity to 0
                         }))
                     }
                 };
             }
 
-            // Find matching variant and update quantity
-            const variantIndex = productMap[productIdStr].productId.variants.findIndex(v => v.name === item.variantName);
+            // Add quantity to correct variant
+            const variantList = productMap[productIdStr].productId.variants;
+            const variantIndex = variantList.findIndex(v => v.name === item.variantName);
             if (variantIndex !== -1) {
-                productMap[productIdStr].productId.variants[variantIndex].quantity += item.quantity;
+                variantList[variantIndex].quantity += item.quantity;
             }
         }
 
