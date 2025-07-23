@@ -210,15 +210,50 @@ exports.getCart = async (req, res) => {
         const { userId } = req.query;
         const today = new Date().toISOString().split('T')[0];
 
-        const cart = await Cart.findOne({ userId, date: today })
-            .populate('items.productId'); // populate full product details
+        const cart = await Cart.findOne({ userId, date: today }).populate('items.productId');
 
-        if (!cart) {
-            return res.status(404).json({ success: false, message: "Cart not found." });
+        if (!cart || !cart.items.length) {
+            return res.status(404).json({ success: false, message: "Cart is empty." });
         }
 
-        res.status(200).json({ success: true, cart });
+        const productMap = {};
+
+        // Loop through cart items
+        for (const item of cart.items) {
+            const product = item.productId;
+            if (!product) continue;
+
+            const productIdStr = product._id.toString();
+
+            // Initialize product in map
+            if (!productMap[productIdStr]) {
+                productMap[productIdStr] = {
+                    productId: {
+                        ...product.toObject(),
+                        variants: product.variants.map(variant => ({
+                            ...variant,
+                            quantity: 0 // default quantity
+                        }))
+                    }
+                };
+            }
+
+            // Find matching variant and update quantity
+            const variantIndex = productMap[productIdStr].productId.variants.findIndex(v => v.name === item.variantName);
+            if (variantIndex !== -1) {
+                productMap[productIdStr].productId.variants[variantIndex].quantity += item.quantity;
+            }
+        }
+
+        const responseCart = Object.values(productMap);
+
+        res.status(200).json({
+            success: true,
+            cart: responseCart
+        });
+
     } catch (err) {
+        console.error(err);
         res.status(500).json({ success: false, error: err.message });
     }
 };
