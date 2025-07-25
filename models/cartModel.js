@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const itemSchema = new mongoose.Schema({
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+    categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'categpry', required: true },
     productCode: { type: String, required: true },
     variantName: { type: String, enum: ['A', 'B', 'C', 'D', 'E', 'F'], required: true },
     quantity: { type: Number, default: 0 }

@@ -267,60 +267,60 @@ exports.getCart = async (req, res) => {
     }
 };
 
-exports.getOrdersGrouped = async (req, res) => {
-    try {
-        const { userId } = req.query;
+// exports.getOrdersGrouped = async (req, res) => {
+//     try {
+//         const { userId } = req.query;
 
-        const orders = await Order.find({ userId }).populate('items.productId');
+//         const orders = await Order.find({ userId }).populate('items.productId');
 
-        const groupedByDate = {};
+//         const groupedByDate = {};
 
-        for (const order of orders) {
-            const date = order.date;
+//         for (const order of orders) {
+//             const date = order.date;
 
-            if (!groupedByDate[date]) {
-                groupedByDate[date] = {
-                    id: order._id,   // First order's id for that date
-                    status: order.status || "0",
-                    products: {}
-                };
-            }
+//             if (!groupedByDate[date]) {
+//                 groupedByDate[date] = {
+//                     id: order._id,   // First order's id for that date
+//                     status: order.status || "0",
+//                     products: {}
+//                 };
+//             }
 
-            for (const item of order.items) {
-                const key = item.productCode;
+//             for (const item of order.items) {
+//                 const key = item.productCode;
 
-                if (!groupedByDate[date].products[key]) {
-                    groupedByDate[date].products[key] = {};
-                }
+//                 if (!groupedByDate[date].products[key]) {
+//                     groupedByDate[date].products[key] = {};
+//                 }
 
-                groupedByDate[date].products[key][item.variantName] =
-                    (groupedByDate[date].products[key][item.variantName] || 0) + item.quantity;
-            }
-        }
+//                 groupedByDate[date].products[key][item.variantName] =
+//                     (groupedByDate[date].products[key][item.variantName] || 0) + item.quantity;
+//             }
+//         }
 
-        const result = Object.keys(groupedByDate)
-            .sort((a, b) => new Date(b) - new Date(a)) // latest date first
-            .map((date) => {
-                const productsArr = Object.entries(groupedByDate[date].products).map(([code, variants]) => {
-                    const variantStr = Object.entries(variants)
-                        .map(([v, qty]) => `${v} - ${qty}`)
-                        .join(' / ');
-                    return `${code} → ${variantStr}`;
-                });
+//         const result = Object.keys(groupedByDate)
+//             .sort((a, b) => new Date(b) - new Date(a)) // latest date first
+//             .map((date) => {
+//                 const productsArr = Object.entries(groupedByDate[date].products).map(([code, variants]) => {
+//                     const variantStr = Object.entries(variants)
+//                         .map(([v, qty]) => `${v} - ${qty}`)
+//                         .join(' / ');
+//                     return `${code} → ${variantStr}`;
+//                 });
 
-                return {
-                    id: groupedByDate[date].id,
-                    date,
-                    status: groupedByDate[date].status,
-                    products: productsArr,
-                };
-            });
+//                 return {
+//                     id: groupedByDate[date].id,
+//                     date,
+//                     status: groupedByDate[date].status,
+//                     products: productsArr,
+//                 };
+//             });
 
-        res.status(200).json({ success: true, message: 'Grouped orders', data: result });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-};
+//         res.status(200).json({ success: true, message: 'Grouped orders', data: result });
+//     } catch (err) {
+//         res.status(500).json({ success: false, error: err.message });
+//     }
+// };
 
 exports.submitCartToOrder = async (req, res) => {
     try {
@@ -385,6 +385,81 @@ exports.updateOrderStatus = async (req, res) => {
         await order.save();
 
         res.status(200).json({ success: true, message: "Order status updated successfully.", order });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+};
+
+exports.placeOrder = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const today = new Date().toISOString().split('T')[0];
+        const cart = await Cart.findOne({ userId });
+
+        if (!cart || cart.items.length === 0) {
+            return res.status(400).json({ success: false, message: "Cart is empty." });
+        }
+
+        const newOrder = new Order({
+            userId,
+            date: today,
+            items: cart.items,
+            totalQuantity: cart.totalQuantity,
+            status: 0, // default pending
+        });
+
+        await newOrder.save();
+        await Cart.deleteOne({ _id: cart._id });
+
+        res.status(200).json({ success: true, message: "Order placed successfully.", order: newOrder });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+};
+
+exports.updateOrderStatus = async (req, res) => {
+    try {
+        const { orderId, status } = req.body;
+
+        const updated = await Order.findByIdAndUpdate(orderId, { status }, { new: true });
+
+        if (!updated) {
+            return res.status(404).json({ success: false, message: "Order not found." });
+        }
+
+        res.status(200).json({ success: true, message: "Order status updated.", order: updated });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+};
+
+exports.getOrdersGrouped = async (req, res) => {
+    try {
+        const { userId } = req.query;
+
+        const filter = userId ? { userId } : {};
+
+        const orders = await Order.find(filter)
+            .populate('items.productId')
+            .sort({ createdAt: -1 });
+
+        if (!orders.length) {
+            return res.status(404).json({ success: false, message: "No orders found." });
+        }
+
+        const grouped = {};
+
+        for (const order of orders) {
+            const date = order.date;
+
+            if (!grouped[date]) {
+                grouped[date] = [];
+            }
+
+            grouped[date].push(order);
+        }
+
+        res.status(200).json({ success: true, groupedOrders: grouped });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
