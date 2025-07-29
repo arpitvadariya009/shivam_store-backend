@@ -210,7 +210,7 @@ exports.getCart = async (req, res) => {
         const { userId } = req.query;
         const today = new Date().toISOString().split('T')[0];
 
-        const cart = await Cart.findOne({ userId, date: today }).populate('items.productId');
+        const cart = await Cart.findOne({ userId }).populate('items.productId');
 
         if (!cart || !cart.items.length) {
             return res.status(404).json({ success: false, message: "Cart is empty." });
