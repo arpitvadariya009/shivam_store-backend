@@ -112,10 +112,10 @@ exports.getSingleProduct = async (req, res) => {
 
 exports.addToCart = async (req, res) => {
     try {
-        const { userId, productId, productCode, variantName, increment = 1 } = req.body;
+        const { userId, productId, categoryId, productCode, variantName, increment = 1 } = req.body;
         const today = new Date().toISOString().split('T')[0];
 
-        let cart = await Cart.findOne({ userId, date: today });
+        let cart = await Cart.findOne({ userId });
 
         if (!cart) {
             if (increment <= 0) {
@@ -140,7 +140,7 @@ exports.addToCart = async (req, res) => {
             }
         } else {
             if (increment > 0) {
-                cart.items.push({ productId, productCode, variantName, quantity: increment });
+                cart.items.push({ productId, categoryId, productCode, variantName, quantity: increment });
                 cart.totalQuantity += increment;
             } else {
                 return res.status(400).json({ success: false, message: "Cannot decrement non-existing item." });
