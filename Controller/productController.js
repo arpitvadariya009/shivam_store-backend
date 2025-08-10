@@ -432,34 +432,50 @@ exports.updateOrderStatus = async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 };
-
 exports.getOrdersGrouped = async (req, res) => {
     try {
         const { userId } = req.query;
-
         const filter = userId ? { userId } : {};
 
         const orders = await Order.find(filter)
-            .populate('items.productId')
+            .populate('items.productId', 'productCode') // only get productCode from Product
             .sort({ createdAt: -1 });
 
         if (!orders.length) {
             return res.status(404).json({ success: false, message: "No orders found." });
         }
 
-        const grouped = {};
+        // Group by date in a simplified structure
+        const groupedOrders = {};
 
         for (const order of orders) {
             const date = order.date;
 
-            if (!grouped[date]) {
-                grouped[date] = [];
+            if (!groupedOrders[date]) {
+                groupedOrders[date] = [];
             }
 
-            grouped[date].push(order);
+            // Combine items for the same productCode into a single string like: "1005 → C - 6 / D - 6 / E - 12"
+            const productMap = {};
+
+            order.items.forEach(item => {
+                const code = item.productCode || (item.productId?.productCode ?? 'N/A');
+                if (!productMap[code]) {
+                    productMap[code] = [];
+                }
+                productMap[code].push(`${item.variantName} - ${item.quantity}`);
+            });
+
+            Object.entries(productMap).forEach(([code, variants]) => {
+                groupedOrders[date].push(`${code} → ${variants.join(' / ')}`);
+            });
         }
 
-        res.status(200).json({ success: true, groupedOrders: grouped });
+        res.status(200).json({
+            success: true,
+            groupedOrders
+        });
+
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
