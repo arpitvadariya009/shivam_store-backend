@@ -480,3 +480,85 @@ exports.getOrdersGrouped = async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 };
+exports.getAllOrdersList = async (req, res) => {
+    try {
+        const { status, category, date } = req.query;
+
+        // Base filter
+        const filter = {};
+
+        // ✅ Apply filters only if provided
+        if (status !== undefined && status !== '') {
+            filter.status = Number(status);
+        }
+        if (date && date.trim() !== '') {
+            filter.date = date;
+        }
+        // category will be filtered after populate since it's inside items array
+
+        // Fetch orders with full population
+        const orders = await Order.find(filter)
+            .populate('userId', 'firmName city') // Assuming User has city field
+            .populate('items.productId', 'name')
+            .populate('items.categoryId', 'name')
+            .sort({ createdAt: -1 });
+
+        if (!orders.length) {
+            return res.status(404).json({ success: false, message: "No orders found." });
+        }
+
+        const formattedOrders = [];
+
+        for (const order of orders) {
+            for (const item of order.items) {
+                // ✅ Category filter applied here (after populate)
+                if (category && category.trim() !== '' && item.categoryId?.categoryName !== category) {
+                    continue;
+                }
+
+                formattedOrders.push({
+                    date: order.date,
+                    city: order.userId?.city || 'Unknown',
+                    category: item.categoryId?.name || 'Unknown',
+                    productName: item.productId?.name || 'Unknown',
+                    status: getStatusText(order.status),
+                    orderId: order._id
+                });
+            }
+        }
+
+        if (!formattedOrders.length) {
+            return res.status(404).json({ success: false, message: "No matching orders found." });
+        }
+
+        res.status(200).json({
+            success: true,
+            total: formattedOrders.length,
+            orders: formattedOrders
+        });
+
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+};
+
+// ✅ Status Code → Text Mapping
+function getStatusText(status) {
+    switch (status) {
+        case 0: return 'PENDING';
+        case 1: return 'IN PROCESS';
+        case 2: return 'DONE';
+        default: return 'UNKNOWN';
+    }
+}
+
+
+// Helper to convert status codes to text
+function getStatusText(status) {
+    switch (status) {
+        case 0: return 'PENDING';
+        case 1: return 'IN PROCESS';
+        case 2: return 'DONE';
+        default: return 'UNKNOWN';
+    }
+}

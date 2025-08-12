@@ -14,7 +14,8 @@ const {
     placeOrder,
     updateOrderStatus,
     getProductsBySubCategoryId,
-    getSingleProduct
+    getSingleProduct,
+    getAllOrdersList
 } = require('../Controller/productController');
 
 // ✅ Multer Setup
@@ -42,5 +43,6 @@ router.get('/get-to-cart', getCart);
 router.post('/place-order', placeOrder);            // NEW - Place order
 router.put('/update/order', updateOrderStatus);     // Update order status
 router.get('/grouped-orders', getOrdersGrouped);    // Grouped & sorted orders
+router.get('/all/grouped-orders', getAllOrdersList);    // Grouped & sorted orders
 
 module.exports = router;
