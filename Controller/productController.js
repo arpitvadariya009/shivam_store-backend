@@ -484,21 +484,18 @@ exports.getAllOrdersList = async (req, res) => {
     try {
         const { status, category, date } = req.query;
 
-        // Base filter
+        // Build base filter
         const filter = {};
-
-        // ✅ Apply filters only if provided
         if (status !== undefined && status !== '') {
             filter.status = Number(status);
         }
         if (date && date.trim() !== '') {
             filter.date = date;
         }
-        // category will be filtered after populate since it's inside items array
 
-        // Fetch orders with full population
+        // Fetch orders with population
         const orders = await Order.find(filter)
-            .populate('userId', 'firmName city') // Assuming User has city field
+            .populate('userId', 'firmName city')
             .populate('items.productId', 'name')
             .populate('items.categoryId', 'name')
             .sort({ createdAt: -1 });
@@ -511,18 +508,26 @@ exports.getAllOrdersList = async (req, res) => {
 
         for (const order of orders) {
             for (const item of order.items) {
-                // ✅ Category filter applied here (after populate)
-                if (category && category.trim() !== '' && item.categoryId?.categoryName !== category) {
-                    continue;
+                console.log(item);
+
+                if (category && category.trim() !== '') {
+                    if (!item.categoryId?.name ||
+                        item.categoryId.name.toLowerCase() !== category.toLowerCase()) {
+                        continue;
+                    }
                 }
 
                 formattedOrders.push({
+                    orderId: order._id,
                     date: order.date,
                     city: order.userId?.city || 'Unknown',
+                    firmName: order.userId?.firmName || 'Unknown',
                     category: item.categoryId?.name || 'Unknown',
                     productName: item.productId?.name || 'Unknown',
+                    productCode: item.productCode || 'Unknown',
+                    variantName: item.variantName,
+                    quantity: item.quantity,
                     status: getStatusText(order.status),
-                    orderId: order._id
                 });
             }
         }
@@ -538,22 +543,12 @@ exports.getAllOrdersList = async (req, res) => {
         });
 
     } catch (err) {
+        console.error("Error in getAllOrdersList:", err);
         res.status(500).json({ success: false, error: err.message });
     }
 };
 
 // ✅ Status Code → Text Mapping
-function getStatusText(status) {
-    switch (status) {
-        case 0: return 'PENDING';
-        case 1: return 'IN PROCESS';
-        case 2: return 'DONE';
-        default: return 'UNKNOWN';
-    }
-}
-
-
-// Helper to convert status codes to text
 function getStatusText(status) {
     switch (status) {
         case 0: return 'PENDING';
