@@ -37,6 +37,7 @@ exports.getCategoryById = async (req, res) => {
     }
 };
 
+
 // Update category
 exports.updateCategory = async (req, res) => {
     try {
