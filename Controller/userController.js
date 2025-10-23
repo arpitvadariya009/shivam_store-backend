@@ -86,3 +86,31 @@ exports.updateUser = async (req, res) => {
         });
     }
 };
+
+exports.getAllUsers = async (req, res) => {
+    try {
+        const { firmName, city, mobile, isverified, userType } = req.query;
+
+        const filter = {};
+        if (firmName) filter.firmName = { $regex: firmName, $options: 'i' };
+        if (city) filter.city = { $regex: city, $options: 'i' };
+        if (mobile) filter.mobile = mobile;
+        if (isverified !== undefined) filter.isverified = isverified === 'true';
+        if (userType !== undefined) filter.userType = Number(userType);
+
+        const users = await User.find(filter).sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            message: 'Users fetched successfully',
+            count: users.length,
+            data: users
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch users',
+            error: error.message
+        });
+    }
+};
