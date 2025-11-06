@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
-const categprySchema = new mongoose.Schema({
+const categorySchema = new mongoose.Schema({
     name: String,
     image: String,
     colorCode : String,
@@ -13,4 +13,4 @@ const categprySchema = new mongoose.Schema({
     timestamps: true
 });
 
-module.exports = mongoose.model('categpry', categprySchema);
+module.exports = mongoose.model('category', categorySchema);

@@ -13,7 +13,7 @@ const {
 router.post('/createCategory', upload.single("image"), createCategory);
 router.get('/getAllCategories', getAllCategories);
 router.get('/getCategoryById', getCategoryById);
-router.put('/updateCategory', updateCategory);
+router.put('/updateCategory/:id', upload.single("image"), updateCategory);
 router.delete('/deleteCategory', deleteCategory);
 
 module.exports = router;

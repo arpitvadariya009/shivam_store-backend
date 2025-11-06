@@ -7,7 +7,7 @@ const subCategorySchema = new mongoose.Schema({
     },
     categoryId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'categpry', // Reference to Category
+        ref: 'category', // Reference to Category
         required: true
     },
     image: {

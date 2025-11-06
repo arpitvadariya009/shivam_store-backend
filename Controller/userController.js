@@ -3,7 +3,29 @@ const bcrypt = require('bcrypt');
 
 exports.createUser = async (req, res) => {
     try {
-        const { firmName, city, mobile, pin } = req.body;
+        const { firmName, city, mobile, pin, userName } = req.body;
+
+        // Validate required fields
+        if (!userName) {
+            return res.status(400).json({
+                success: false,
+                message: 'User name is required'
+            });
+        }
+
+        if (!mobile) {
+            return res.status(400).json({
+                success: false,
+                message: 'Mobile number is required'
+            });
+        }
+
+        if (!pin) {
+            return res.status(400).json({
+                success: false,
+                message: 'PIN is required'
+            });
+        }
 
         const existingUser = await User.findOne({ mobile });
         if (existingUser) {
@@ -14,7 +36,7 @@ exports.createUser = async (req, res) => {
             });
         }
 
-        const user = new User({ firmName, city, mobile, pin });
+        const user = new User({ firmName, city, mobile, pin, userName });
         await user.save();
 
         res.status(200).json({
@@ -110,6 +132,40 @@ exports.getAllUsers = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to fetch users',
+            error: error.message
+        });
+    }
+};
+
+exports.deleteUser = async (req, res) => {
+    try {
+        const { userId } = req.query;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: 'User ID is required'
+            });
+        }
+
+        const deletedUser = await User.findByIdAndDelete(userId);
+
+        if (!deletedUser) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'User deleted successfully',
+            data: deletedUser
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete user',
             error: error.message
         });
     }

@@ -2,6 +2,8 @@ const Product = require('../models/productModel');
 const Cart = require('../models/cartModel');
 const Order = require('../models/orderModel');
 const Favorite = require('../models/favoriteModel');
+const { detectMediaType } = require('../middleware/mediaUpload');
+
 exports.createProducts = async (req, res) => {
     try {
         const productArray = JSON.parse(req.body.products);
@@ -11,19 +13,55 @@ exports.createProducts = async (req, res) => {
 
         for (let i = 0; i < productArray.length; i++) {
             const p = productArray[i];
+            const file = files[i];
 
-            // Use the variants as sent in the request
-            const variants = (p.variants || []).map(variant => ({
-                name: variant.name,
-                available: variant.available !== undefined ? variant.available : true
-            }));
+            // Validation
+            if (!file) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Media file is required for product ${i + 1}`,
+                });
+            }
+
+            if (!p.categoryId) {
+                return res.status(400).json({
+                    success: false,
+                    message: `CategoryId is required for product ${i + 1}`,
+                });
+            }
+
+            // Detect media type from file extension
+            const mediaType = detectMediaType(file.filename);
+            if (!mediaType) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid file type for product ${i + 1}. Only images and videos are allowed.`,
+                });
+            }
+
+            // Process variants - default to 'A' with setSize 1 if no variants provided
+            let variants = [];
+            if (p.variants && Array.isArray(p.variants) && p.variants.length > 0) {
+                variants = p.variants.map(variant => ({
+                    name: variant.name || 'A',
+                    setSize: variant.setSize || 1
+                }));
+            } else {
+                // Default: start with variant 'A'
+                variants = [{
+                    name: 'A',
+                    setSize: 1
+                }];
+            }
 
             const newProduct = new Product({
                 code: p.code,
                 subCategoryId: p.subCategoryId,
-                setSize: p.setSize,
-                image: files[i]?.filename || '',
-                variants
+                categoryId: p.categoryId,
+                media: file.filename,
+                mediaType: mediaType,
+                type: p.type || 1,
+                variants: variants
             });
 
             await newProduct.save();
@@ -231,15 +269,16 @@ exports.getCart = async (req, res) => {
                         _id: product._id,
                         code: product.code,
                         subCategoryId: product.subCategoryId,
-                        image: product.image,
+                        categoryId: product.categoryId,
+                        media: product.media,
+                        mediaType: product.mediaType,
                         type: product.type,
-                        setSize: product.setSize,
                         createdAt: product.createdAt,
                         __v: product.__v,
                         variants: product.variants.map(v => ({
                             _id: v._id,
                             name: v.name,
-                            available: v.available,
+                            setSize: v.setSize,
                             quantity: 0 // initialize quantity to 0
                         }))
                     }
@@ -501,7 +540,12 @@ exports.getAllOrdersList = async (req, res) => {
             .sort({ createdAt: -1 });
 
         if (!orders.length) {
-            return res.status(404).json({ success: false, message: "No orders found." });
+            return res.status(200).json({ 
+                success: true, 
+                message: "No orders found.", 
+                total: 0,
+                orders: [] 
+            });
         }
 
         const formattedOrders = [];
@@ -533,7 +577,12 @@ exports.getAllOrdersList = async (req, res) => {
         }
 
         if (!formattedOrders.length) {
-            return res.status(404).json({ success: false, message: "No matching orders found." });
+            return res.status(200).json({ 
+                success: true, 
+                message: "No matching orders found.", 
+                total: 0,
+                orders: [] 
+            });
         }
 
         res.status(200).json({
@@ -548,6 +597,95 @@ exports.getAllOrdersList = async (req, res) => {
     }
 };
 
+// ✅ Delete Orders by Category - Remove orders with "Unknown" category
+exports.deleteOrdersByCategory = async (req, res) => {
+    try {
+        const { category = 'Unknown' } = req.body;
+        
+        console.log(`🗑️  Starting deletion of orders with category: ${category}`);
+        
+        // Find all orders
+        const orders = await Order.find({})
+            .populate('items.categoryId', 'name');
+        
+        let deletedOrdersCount = 0;
+        let deletedItemsCount = 0;
+        let ordersToDelete = [];
+        let ordersToUpdate = [];
+        
+        for (const order of orders) {
+            let itemsToKeep = [];
+            let hasUnknownItems = false;
+            
+            for (const item of order.items) {
+                const itemCategory = item.categoryId?.name || 'Unknown';
+                
+                if (itemCategory === category) {
+                    hasUnknownItems = true;
+                    deletedItemsCount++;
+                    console.log(`🗑️  Found item with ${category} category:`, {
+                        orderId: order._id,
+                        productCode: item.productCode,
+                        category: itemCategory
+                    });
+                } else {
+                    itemsToKeep.push(item);
+                }
+            }
+            
+            if (hasUnknownItems) {
+                if (itemsToKeep.length === 0) {
+                    // Delete entire order if all items are "Unknown"
+                    ordersToDelete.push(order._id);
+                    deletedOrdersCount++;
+                } else {
+                    // Update order to remove only "Unknown" items
+                    ordersToUpdate.push({
+                        orderId: order._id,
+                        newItems: itemsToKeep,
+                        newTotalQuantity: itemsToKeep.reduce((sum, item) => sum + item.quantity, 0)
+                    });
+                }
+            }
+        }
+        
+        // Execute deletions
+        if (ordersToDelete.length > 0) {
+            await Order.deleteMany({ _id: { $in: ordersToDelete } });
+            console.log(`🗑️  Deleted ${ordersToDelete.length} complete orders`);
+        }
+        
+        // Execute updates
+        for (const update of ordersToUpdate) {
+            await Order.findByIdAndUpdate(update.orderId, {
+                items: update.newItems,
+                totalQuantity: update.newTotalQuantity
+            });
+        }
+        
+        console.log(`🗑️  Updated ${ordersToUpdate.length} orders (removed items only)`);
+        
+        res.status(200).json({
+            success: true,
+            message: `Successfully deleted orders/items with category "${category}"`,
+            summary: {
+                deletedCompleteOrders: deletedOrdersCount,
+                updatedOrders: ordersToUpdate.length,
+                deletedItems: deletedItemsCount,
+                category: category
+            }
+        });
+        
+    } catch (err) {
+        console.error("Error in deleteOrdersByCategory:", err);
+        res.status(500).json({ 
+            success: false, 
+            error: err.message,
+            message: "Failed to delete orders by category"
+        });
+    }
+};
+
 // ✅ Status Code → Text Mapping
 function getStatusText(status) {
     switch (status) {
@@ -557,3 +695,222 @@ function getStatusText(status) {
         default: return 'UNKNOWN';
     }
 }
+
+// ✅ Update Product Media (Image/Video)
+exports.updateProductMedia = async (req, res) => {
+    try {
+        const { productId } = req.params;
+        const file = req.file;
+
+        if (!file) {
+            return res.status(400).json({
+                success: false,
+                message: 'Media file is required'
+            });
+        }
+
+        // Find the product
+        const product = await Product.findById(productId);
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: 'Product not found'
+            });
+        }
+
+        // Detect media type from file extension
+        const mediaType = detectMediaType(file.filename);
+        if (!mediaType) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid file type. Only images and videos are allowed.'
+            });
+        }
+
+        // Delete old media file
+        const fs = require('fs');
+        const path = require('path');
+        if (product.media) {
+            const oldFilePath = path.join(__dirname, '../uploads', product.media);
+            if (fs.existsSync(oldFilePath)) {
+                fs.unlinkSync(oldFilePath);
+                console.log(`🗑️ Deleted old media file: ${product.media}`);
+            }
+        }
+
+        // Update product with new media
+        product.media = file.filename;
+        product.mediaType = mediaType;
+        await product.save();
+
+        console.log(`✅ Updated product ${productId} media: ${file.filename}`);
+
+        res.status(200).json({
+            success: true,
+            message: 'Product media updated successfully',
+            data: product
+        });
+
+    } catch (err) {
+        console.error('Error updating product media:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: err.message
+        });
+    }
+};
+
+// ✅ Update Product (Code, Category, Subcategory, Type, Variants)
+exports.updateProduct = async (req, res) => {
+    try {
+        const { productId } = req.params;
+        const { code, categoryId, subCategoryId, type, variants } = req.body;
+
+        // Find the product
+        const product = await Product.findById(productId);
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: 'Product not found'
+            });
+        }
+
+        // Validate and update code if provided
+        if (code !== undefined) {
+            if (!code.trim()) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Product code cannot be empty'
+                });
+            }
+
+            // Check if code already exists (excluding current product)
+            const existingProduct = await Product.findOne({ 
+                code: code.trim(), 
+                _id: { $ne: productId } 
+            });
+            if (existingProduct) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Product code already exists'
+                });
+            }
+
+            product.code = code.trim();
+        }
+
+        // Update categoryId if provided
+        if (categoryId !== undefined) {
+            product.categoryId = categoryId;
+        }
+
+        // Update subCategoryId if provided
+        if (subCategoryId !== undefined) {
+            product.subCategoryId = subCategoryId;
+        }
+
+        // Update type if provided (1-6)
+        if (type !== undefined) {
+            if (![1, 2, 3, 4, 5, 6].includes(type)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Product type must be between 1 and 6'
+                });
+            }
+            product.type = type;
+        }
+
+        // Update variants if provided
+        if (variants !== undefined) {
+            if (!Array.isArray(variants)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Variants must be an array'
+                });
+            }
+
+            // Validate variants
+            for (let variant of variants) {
+                if (!variant.name || typeof variant.name !== 'string') {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Each variant must have a valid name'
+                    });
+                }
+
+                if (variant.setSize === undefined || variant.setSize < 0 || variant.setSize > 100) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Variant setSize must be between 0 and 100'
+                    });
+                }
+            }
+
+            product.variants = variants;
+        }
+
+        await product.save();
+
+        console.log(`✅ Updated product ${productId}`);
+
+        res.status(200).json({
+            success: true,
+            message: 'Product updated successfully',
+            data: product
+        });
+
+    } catch (err) {
+        console.error('Error updating product:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: err.message
+        });
+    }
+};
+
+// ✅ Delete Product
+exports.deleteProduct = async (req, res) => {
+    try {
+        const { productId } = req.params;
+
+        // Find the product
+        const product = await Product.findById(productId);
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: 'Product not found'
+            });
+        }
+
+        // Delete media file if exists
+        const fs = require('fs');
+        const path = require('path');
+        if (product.media) {
+            const filePath = path.join(__dirname, '../uploads', product.media);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+                console.log(`🗑️ Deleted media file: ${product.media}`);
+            }
+        }
+
+        // Delete product from database
+        await Product.findByIdAndDelete(productId);
+
+        console.log(`✅ Deleted product ${productId}`);
+
+        res.status(200).json({
+            success: true,
+            message: 'Product deleted successfully'
+        });
+
+    } catch (err) {
+        console.error('Error deleting product:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: err.message
+        });
+    }
+};

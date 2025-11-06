@@ -1,9 +1,12 @@
 // models/Product.js
 const mongoose = require('mongoose');
 
+// Auto-generate A-Z variant names
+const variantNames = Array.from({length: 26}, (_, i) => String.fromCharCode(65 + i));
+
 const variantSchema = new mongoose.Schema({
-    name: { type: String, enum: ['A', 'B', 'C', 'D', 'E', 'F'], required: true },
-    available: { type: Boolean, default: true }
+    name: { type: String, enum: variantNames, required: true },
+    setSize: { type: Number, default: 1, required: true }
 });
 
 const productSchema = new mongoose.Schema({
@@ -13,9 +16,14 @@ const productSchema = new mongoose.Schema({
         ref: 'SubCategory',
         required: true
     },
-    image: { type: String },
-    type: { type: Number, default: 0 },
-    setSize: { type: Number, required: true },
+    categoryId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'category',
+        required: true
+    },
+    media: { type: String, required: true },
+    mediaType: { type: String, enum: ['image', 'video'], required: true },
+    type: { type: Number, enum: [1, 2, 3, 4, 5, 6], default: 1 },
     variants: [variantSchema],
     createdAt: { type: Date, default: Date.now }
 });

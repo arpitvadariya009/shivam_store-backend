@@ -41,11 +41,19 @@ exports.getCategoryById = async (req, res) => {
 // Update category
 exports.updateCategory = async (req, res) => {
     try {
-        const { name, img, status } = req.body;
+        const { name, status } = req.body;
+        
+        // Prepare update data
+        const updateData = { name, status };
+        
+        // If a file is uploaded, include it in the update
+        if (req.file) {
+            updateData.image = req.file.filename;
+        }
 
         const updatedCategory = await Category.findByIdAndUpdate(
             req.params.id,
-            { name, img, status },
+            updateData,
             { new: true }
         );
 
@@ -53,9 +61,15 @@ exports.updateCategory = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Category not found' });
         }
 
-        res.status(200).json({ success: true, category: updatedCategory });
+        res.status(200).json({ 
+            success: true, 
+            category: updatedCategory,
+            message: 'Category updated successfully',
+            thumbnailUrl: req.file ? `/uploads/${req.file.filename}` : updatedCategory.image
+        });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server Error', error });
+        console.error('Update category error:', error);
+        res.status(500).json({ success: false, message: 'Server Error', error: error.message });
     }
 };
 

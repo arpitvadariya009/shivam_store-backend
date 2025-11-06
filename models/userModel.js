@@ -6,7 +6,10 @@ const userSchema = new mongoose.Schema({
     city: String,
     mobile: String,
     pin: String,
-    userName: String,
+    userName: {
+        type: String,
+        required: true
+    },
     isverified: {
         type: Boolean,
         default: false

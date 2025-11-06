@@ -45,11 +45,19 @@ exports.getSubCategoryById = async (req, res) => {
 // Update SubCategory
 exports.updateSubCategory = async (req, res) => {
     try {
-        const { name, categoryId, img, status } = req.body;
+        const { name, categoryId, status } = req.body;
+        
+        // Prepare update data
+        const updateData = { name, categoryId, status };
+        
+        // If a file is uploaded, include it in the update
+        if (req.file) {
+            updateData.image = req.file.filename;
+        }
 
         const updated = await SubCategory.findByIdAndUpdate(
             req.params.id,
-            { name, categoryId, img, status },
+            updateData,
             { new: true }
         );
 
@@ -57,9 +65,15 @@ exports.updateSubCategory = async (req, res) => {
             return res.status(404).json({ success: false, message: 'SubCategory not found' });
         }
 
-        res.status(200).json({ success: true, subCategory: updated });
+        res.status(200).json({ 
+            success: true, 
+            subCategory: updated,
+            message: 'SubCategory updated successfully',
+            thumbnailUrl: req.file ? `/uploads/${req.file.filename}` : updated.image
+        });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server Error', error });
+        console.error('Update subcategory error:', error);
+        res.status(500).json({ success: false, message: 'Server Error', error: error.message });
     }
 };
 

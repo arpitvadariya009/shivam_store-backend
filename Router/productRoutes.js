@@ -1,8 +1,7 @@
 // routes/productRoutes.js
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
-const path = require('path');
+const { upload, validateFileSize } = require('../middleware/mediaUpload');
 
 // ✅ Controller imports
 const {
@@ -15,24 +14,20 @@ const {
     updateOrderStatus,
     getProductsBySubCategoryId,
     getSingleProduct,
-    getAllOrdersList
+    getAllOrdersList,
+    deleteOrdersByCategory,
+    updateProductMedia,
+    updateProduct,
+    deleteProduct
 } = require('../Controller/productController');
 
-// ✅ Multer Setup
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'uploads/');
-    },
-    filename: function (req, file, cb) {
-        cb(null, `${Date.now()}-${file.originalname}`);
-    }
-});
-const upload = multer({ storage });
-
 // ✅ Product Routes
-router.post('/createProducts', upload.array('images'), createProducts);
+router.post('/createProducts', upload.array('media'), validateFileSize, createProducts);
 router.get('/get/products', getProductsBySubCategoryId);
 router.get('/product', getSingleProduct);
+router.put('/updateProductMedia/:productId', upload.single('media'), validateFileSize, updateProductMedia);
+router.put('/updateProduct/:productId', updateProduct);
+router.delete('/deleteProduct/:productId', deleteProduct);
 
 // ✅ Cart Routes
 router.post('/add-to-cart', addToCart);
@@ -44,5 +39,6 @@ router.post('/place-order', placeOrder);            // NEW - Place order
 router.put('/update/order', updateOrderStatus);     // Update order status
 router.get('/grouped-orders', getOrdersGrouped);    // Grouped & sorted orders
 router.get('/all/grouped-orders', getAllOrdersList);    // Grouped & sorted orders
+router.delete('/deleteOrdersByCtgr', deleteOrdersByCategory);  // Delete orders by category
 
 module.exports = router;
