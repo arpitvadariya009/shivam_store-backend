@@ -76,5 +76,5 @@ app.listen(port, (err) => {
   if (err) {
     console.log(err);
   }
-  console.log("server connceted successfully :- " + port);
+  console.log("server connected successfully :- " + port);
 })
