@@ -69,7 +69,7 @@ exports.updateSubCategory = async (req, res) => {
             success: true, 
             subCategory: updated,
             message: 'SubCategory updated successfully',
-            thumbnailUrl: req.file ? `/uploads/${req.file.filename}` : updated.image
+            thumbnailUrl: req.file ? `https://yummyburp.in/uploads/${req.file.filename}` : (updated.image ? `https://yummyburp.in/uploads/${updated.image}` : null)
         });
     } catch (error) {
         console.error('Update subcategory error:', error);

@@ -15,10 +15,13 @@ exports.getTeaserVideo = async (req, res) => {
             });
         }
 
+        // Return correct production URL format
+        const videoUrl = `https://yummyburp.in/uploads/${teaserVideo.filename}`;
+
         res.status(200).json({
             success: true,
             message: 'Teaser video fetched successfully',
-            videoUrl: teaserVideo.url,
+            videoUrl: videoUrl,
             data: teaserVideo
         });
     } catch (error) {
@@ -73,8 +76,8 @@ exports.uploadTeaserVideo = async (req, res) => {
         // Get current active video to delete it later
         const currentVideo = await TeaserVideo.findOne({ isActive: true });
 
-        // Create video URL
-        const videoUrl = `${req.protocol}://${req.get('host')}/uploads/${file.filename}`;
+        // Create video URL - always use production URL
+        const videoUrl = `https://yummyburp.in/uploads/${file.filename}`;
 
         // Create new teaser video record
         const newTeaserVideo = new TeaserVideo({
