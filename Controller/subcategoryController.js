@@ -1,4 +1,5 @@
 const SubCategory = require('../models/subcategoryModel');
+const { getUploadsUrl } = require('../config/baseUrl');
 
 // Create SubCategory
 exports.createSubCategory = async (req, res) => {
@@ -69,7 +70,7 @@ exports.updateSubCategory = async (req, res) => {
             success: true, 
             subCategory: updated,
             message: 'SubCategory updated successfully',
-            thumbnailUrl: req.file ? `https://yummyburp.in/uploads/${req.file.filename}` : (updated.image ? `https://yummyburp.in/uploads/${updated.image}` : null)
+            thumbnailUrl: req.file ? getUploadsUrl(req.file.filename) : (updated.image ? getUploadsUrl(updated.image) : null)
         });
     } catch (error) {
         console.error('Update subcategory error:', error);

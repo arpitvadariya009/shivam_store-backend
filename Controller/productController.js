@@ -6,8 +6,48 @@ const { detectMediaType } = require('../middleware/mediaUpload');
 
 exports.createProducts = async (req, res) => {
     try {
-        const productArray = JSON.parse(req.body.products);
-        const files = req.files;
+        // Validate request body
+        if (!req.body.products) {
+            return res.status(400).json({
+                success: false,
+                message: 'Products data is required in request body',
+            });
+        }
+
+        let productArray;
+        try {
+            productArray = JSON.parse(req.body.products);
+        } catch (parseError) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid JSON in products field. Please check your request data.',
+                error: parseError.message
+            });
+        }
+
+        if (!Array.isArray(productArray) || productArray.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Products must be a non-empty array',
+            });
+        }
+
+        const files = req.files || [];
+
+        // Validate files array
+        if (!files || files.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Media files are required. Please upload at least one file.',
+            });
+        }
+
+        if (files.length !== productArray.length) {
+            return res.status(400).json({
+                success: false,
+                message: `Number of files (${files.length}) does not match number of products (${productArray.length})`,
+            });
+        }
 
         const results = [];
 

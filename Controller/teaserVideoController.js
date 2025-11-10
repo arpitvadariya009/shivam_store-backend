@@ -1,6 +1,7 @@
 const TeaserVideo = require('../models/teaserVideoModel');
 const fs = require('fs');
 const path = require('path');
+const { getUploadsUrl } = require('../config/baseUrl');
 
 // Get current active teaser video
 exports.getTeaserVideo = async (req, res) => {
@@ -15,8 +16,8 @@ exports.getTeaserVideo = async (req, res) => {
             });
         }
 
-        // Return correct production URL format
-        const videoUrl = `https://yummyburp.in/uploads/${teaserVideo.filename}`;
+        // Return correct URL format (environment-aware)
+        const videoUrl = getUploadsUrl(teaserVideo.filename);
 
         res.status(200).json({
             success: true,
@@ -76,8 +77,8 @@ exports.uploadTeaserVideo = async (req, res) => {
         // Get current active video to delete it later
         const currentVideo = await TeaserVideo.findOne({ isActive: true });
 
-        // Create video URL - always use production URL
-        const videoUrl = `https://yummyburp.in/uploads/${file.filename}`;
+        // Create video URL (environment-aware)
+        const videoUrl = getUploadsUrl(file.filename);
 
         // Create new teaser video record
         const newTeaserVideo = new TeaserVideo({
