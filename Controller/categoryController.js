@@ -1,4 +1,5 @@
 const Category = require('../models/categoryModel');
+const { getUploadsUrl } = require('../config/baseUrl');
 
 // Create category
 exports.createCategory = async (req, res) => {
@@ -65,7 +66,7 @@ exports.updateCategory = async (req, res) => {
             success: true, 
             category: updatedCategory,
             message: 'Category updated successfully',
-            thumbnailUrl: req.file ? `https://yummyburp.in/uploads/${req.file.filename}` : (updatedCategory.image ? `https://yummyburp.in/uploads/${updatedCategory.image}` : null)
+            thumbnailUrl: req.file ? getUploadsUrl(req.file.filename) : (updatedCategory.image ? getUploadsUrl(updatedCategory.image) : null)
         });
     } catch (error) {
         console.error('Update category error:', error);
