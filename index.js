@@ -17,27 +17,53 @@ const allowedOrigins = [
   'https://shivamstores.vercel.app',
 ];
 
-// Configure CORS with proper options
+// Enhanced CORS configuration with manual header setting for reliability
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  // Log all requests for debugging
+  console.log(`🌐 ${req.method} ${req.url} from origin: ${origin || 'no-origin'}`);
+  
+  // Always set CORS headers manually for maximum compatibility
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    console.log(`✅ CORS: Allowed origin ${origin}`);
+  } else if (!origin) {
+    // Allow requests with no origin (Postman, mobile apps, etc.)
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    console.log(`✅ CORS: Allowed no-origin request`);
+  } else {
+    // For production: still allow but log for monitoring
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    console.log(`⚠️ CORS: Allowing unknown origin ${origin} for debugging`);
+  }
+  
+  // Always set these headers
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Range, X-Content-Range');
+  res.setHeader('Access-Control-Max-Age', '3600');
+  
+  // Handle preflight OPTIONS requests immediately
+  if (req.method === 'OPTIONS') {
+    console.log(`✅ CORS: Preflight request handled for ${req.url}`);
+    return res.status(200).end();
+  }
+  
+  next();
+});
+
+// Also keep the cors package as backup
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, Postman)
-    if (!origin) return callback(null, true);
-    
-    // Check if origin is in allowed list
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      // Log unauthorized origin for debugging but allow it for now to fix production issues
-      console.log(`CORS: Allowing origin (may need to be added to allowed list): ${origin}`);
-      callback(null, true);
-    }
+    callback(null, true); // Allow all origins as backup
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 3600,
-  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+  optionsSuccessStatus: 200
 }));
 
 // Increase body parser limits to handle large file uploads
