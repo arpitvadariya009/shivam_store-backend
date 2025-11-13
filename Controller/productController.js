@@ -293,7 +293,8 @@ exports.getCart = async (req, res) => {
         }
 
         const productMap = {};
-
+        console.log(cart);
+        
         for (const item of cart.items) {
             const product = item.productId;
             if (!product) continue;

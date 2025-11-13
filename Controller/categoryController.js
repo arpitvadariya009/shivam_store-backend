@@ -4,9 +4,9 @@ const { getUploadsUrl } = require('../config/baseUrl');
 // Create category
 exports.createCategory = async (req, res) => {
     try {
-        const { name } = req.body;
+        const { name, colorCode } = req.body;
 
-        const newCategory = new Category({ name, image: req.file && req.file.filename });
+        const newCategory = new Category({ colorCode, name, image: req.file && req.file.filename });
         const savedCategory = await newCategory.save();
 
         res.status(201).json({ success: true, category: savedCategory });
@@ -43,10 +43,10 @@ exports.getCategoryById = async (req, res) => {
 exports.updateCategory = async (req, res) => {
     try {
         const { name, status } = req.body;
-        
+
         // Prepare update data
         const updateData = { name, status };
-        
+
         // If a file is uploaded, include it in the update
         if (req.file) {
             updateData.image = req.file.filename;
@@ -62,8 +62,8 @@ exports.updateCategory = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Category not found' });
         }
 
-        res.status(200).json({ 
-            success: true, 
+        res.status(200).json({
+            success: true,
             category: updatedCategory,
             message: 'Category updated successfully',
             thumbnailUrl: req.file ? getUploadsUrl(req.file.filename) : (updatedCategory.image ? getUploadsUrl(updatedCategory.image) : null)
