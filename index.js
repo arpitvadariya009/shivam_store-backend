@@ -74,8 +74,8 @@ app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 //connect all routes
-app.get("/wellcome", async (req, res) => {
-  res.send("wellcome to shivbam stope");
+app.get("/welcome", async (req, res) => {
+  res.send("welcome to the server of shivam store");
 })
 
 const user = require('./Router/userRoutes');

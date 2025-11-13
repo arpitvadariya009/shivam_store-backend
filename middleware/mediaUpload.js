@@ -52,7 +52,7 @@ const upload = multer({
     storage: storage,
     fileFilter: fileFilter,
     limits: {
-        fileSize: 30 * 1024 * 1024 // 30MB max (will be checked more precisely in controller)
+        fileSize: 200 * 1024 * 1024 // 200MB max to handle larger videos
     }
 });
 
@@ -90,10 +90,10 @@ const validateFileSize = (req, res, next) => {
         });
     }
     
-    if (videoTypes.includes(fileExtension) && fileSizeInMB > 30) {
+    if (videoTypes.includes(fileExtension) && fileSizeInMB > 200) {
         return res.status(400).json({
             success: false,
-            message: `Video file size too large. Maximum allowed: 30MB. Your file: ${fileSizeInMB.toFixed(2)}MB`
+            message: `Video file size too large. Maximum allowed: 200MB. Your file: ${fileSizeInMB.toFixed(2)}MB`
         });
     }
     
