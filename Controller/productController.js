@@ -286,8 +286,6 @@ exports.updateCartItem = async (req, res) => {
 exports.getCart = async (req, res) => {
     try {
         const { userId } = req.query;
-        const today = new Date().toISOString().split('T')[0];
-
         const cart = await Cart.findOne({ userId }).populate('items.productId');
 
         if (!cart || !cart.items.length) {
@@ -295,41 +293,36 @@ exports.getCart = async (req, res) => {
         }
 
         const productMap = {};
-
+        console.log(cart);
+        
         for (const item of cart.items) {
             const product = item.productId;
             if (!product) continue;
 
             const productIdStr = product._id.toString();
 
-            // Initialize if not already in the map
             if (!productMap[productIdStr]) {
+                const { __v, ...productData } = product.toObject();
                 productMap[productIdStr] = {
-                    productId: {
-                        _id: product._id,
-                        code: product.code,
-                        subCategoryId: product.subCategoryId,
-                        categoryId: product.categoryId,
-                        media: product.media,
-                        mediaType: product.mediaType,
-                        type: product.type,
-                        createdAt: product.createdAt,
-                        __v: product.__v,
-                        variants: product.variants.map(v => ({
+                    ...productData,
+                    variants: product.variants
+                        .filter(v => v.available)
+                        .map(v => ({
                             _id: v._id,
                             name: v.name,
                             setSize: v.setSize,
-                            quantity: 0 // initialize quantity to 0
+                            quantity: 0
                         }))
-                    }
                 };
             }
 
             // Add quantity to correct variant
-            const variantList = productMap[productIdStr].productId.variants;
+            const variantList = productMap[productIdStr].variants;
             const variantIndex = variantList.findIndex(v => v.name === item.variantName);
             if (variantIndex !== -1) {
                 variantList[variantIndex].quantity += item.quantity;
+            } else {
+                console.warn(`Variant ${item.variantName} not found for product ${product.code}`);
             }
         }
 
@@ -345,6 +338,7 @@ exports.getCart = async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 };
+
 
 // exports.getOrdersGrouped = async (req, res) => {
 //     try {
@@ -580,11 +574,11 @@ exports.getAllOrdersList = async (req, res) => {
             .sort({ createdAt: -1 });
 
         if (!orders.length) {
-            return res.status(200).json({ 
-                success: true, 
-                message: "No orders found.", 
+            return res.status(200).json({
+                success: true,
+                message: "No orders found.",
                 total: 0,
-                orders: [] 
+                orders: []
             });
         }
 
@@ -617,11 +611,11 @@ exports.getAllOrdersList = async (req, res) => {
         }
 
         if (!formattedOrders.length) {
-            return res.status(200).json({ 
-                success: true, 
-                message: "No matching orders found.", 
+            return res.status(200).json({
+                success: true,
+                message: "No matching orders found.",
                 total: 0,
-                orders: [] 
+                orders: []
             });
         }
 
@@ -641,25 +635,25 @@ exports.getAllOrdersList = async (req, res) => {
 exports.deleteOrdersByCategory = async (req, res) => {
     try {
         const { category = 'Unknown' } = req.body;
-        
+
         console.log(`🗑️  Starting deletion of orders with category: ${category}`);
-        
+
         // Find all orders
         const orders = await Order.find({})
             .populate('items.categoryId', 'name');
-        
+
         let deletedOrdersCount = 0;
         let deletedItemsCount = 0;
         let ordersToDelete = [];
         let ordersToUpdate = [];
-        
+
         for (const order of orders) {
             let itemsToKeep = [];
             let hasUnknownItems = false;
-            
+
             for (const item of order.items) {
                 const itemCategory = item.categoryId?.name || 'Unknown';
-                
+
                 if (itemCategory === category) {
                     hasUnknownItems = true;
                     deletedItemsCount++;
@@ -672,7 +666,7 @@ exports.deleteOrdersByCategory = async (req, res) => {
                     itemsToKeep.push(item);
                 }
             }
-            
+
             if (hasUnknownItems) {
                 if (itemsToKeep.length === 0) {
                     // Delete entire order if all items are "Unknown"
@@ -688,13 +682,13 @@ exports.deleteOrdersByCategory = async (req, res) => {
                 }
             }
         }
-        
+
         // Execute deletions
         if (ordersToDelete.length > 0) {
             await Order.deleteMany({ _id: { $in: ordersToDelete } });
             console.log(`🗑️  Deleted ${ordersToDelete.length} complete orders`);
         }
-        
+
         // Execute updates
         for (const update of ordersToUpdate) {
             await Order.findByIdAndUpdate(update.orderId, {
@@ -702,9 +696,9 @@ exports.deleteOrdersByCategory = async (req, res) => {
                 totalQuantity: update.newTotalQuantity
             });
         }
-        
+
         console.log(`🗑️  Updated ${ordersToUpdate.length} orders (removed items only)`);
-        
+
         res.status(200).json({
             success: true,
             message: `Successfully deleted orders/items with category "${category}"`,
@@ -715,11 +709,11 @@ exports.deleteOrdersByCategory = async (req, res) => {
                 category: category
             }
         });
-        
+
     } catch (err) {
         console.error("Error in deleteOrdersByCategory:", err);
-        res.status(500).json({ 
-            success: false, 
+        res.status(500).json({
+            success: false,
             error: err.message,
             message: "Failed to delete orders by category"
         });
@@ -826,9 +820,9 @@ exports.updateProduct = async (req, res) => {
             }
 
             // Check if code already exists (excluding current product)
-            const existingProduct = await Product.findOne({ 
-                code: code.trim(), 
-                _id: { $ne: productId } 
+            const existingProduct = await Product.findOne({
+                code: code.trim(),
+                _id: { $ne: productId }
             });
             if (existingProduct) {
                 return res.status(400).json({
