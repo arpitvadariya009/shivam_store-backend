@@ -1,12 +1,12 @@
 // models/Product.js
 const mongoose = require('mongoose');
 
-// Auto-generate A-Z variant names
-const variantNames = Array.from({length: 26}, (_, i) => String.fromCharCode(65 + i));
+const variantNames = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
 
 const variantSchema = new mongoose.Schema({
     name: { type: String, enum: variantNames, required: true },
-    setSize: { type: Number, default: 1, required: true }
+    setSize: { type: Number, default: 1, required: true },
+    available: { type: Boolean, default: true }
 });
 
 const productSchema = new mongoose.Schema({
