@@ -42,10 +42,10 @@ exports.getCategoryById = async (req, res) => {
 // Update category
 exports.updateCategory = async (req, res) => {
     try {
-        const { name, status } = req.body;
+        const { name, status, colorCode } = req.body;
 
         // Prepare update data
-        const updateData = { name, status };
+        const updateData = { name, status,colorCode };
 
         // If a file is uploaded, include it in the update
         if (req.file) {
@@ -77,7 +77,7 @@ exports.updateCategory = async (req, res) => {
 // Delete category
 exports.deleteCategory = async (req, res) => {
     try {
-        const deletedCategory = await Category.findByIdAndDelete(req.params.id);
+        const deletedCategory = await Category.findByIdAndDelete(req.query.id);
 
         if (!deletedCategory) {
             return res.status(404).json({ success: false, message: 'Category not found' });
