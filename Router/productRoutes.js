@@ -19,7 +19,8 @@ const {
     updateProductMedia,
     updateProduct,
     deleteProduct,
-    getOrder
+    getOrder,
+    updateVariantAvailability
 } = require('../Controller/productController');
 
 // ✅ Product Routes
@@ -42,5 +43,6 @@ router.get('/grouped-orders', getOrdersGrouped);    // Grouped & sorted orders
 router.get('/all/grouped-orders', getAllOrdersList);    // Grouped & sorted orders
 router.delete('/deleteOrdersByCtgr', deleteOrdersByCategory);  // Delete orders by category
 router.get('/get-to-order', getOrder);
+router.get('/get-to-available', updateVariantAvailability);
 
 module.exports = router;

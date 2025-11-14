@@ -161,7 +161,35 @@ exports.getProductsBySubCategoryId = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+exports.updateVariantAvailability = async (req, res) => {
+    try {
+        const { productId, variantId } = req.query;
 
+        // Find the product by its ID
+        const product = await Product.findById(productId);
+
+        if (!product) {
+            return res.status(404).json({ message: 'Product not found' });
+        }
+
+        // Find the variant by its ID within the product's variants array
+        const variant = product.variants.id(variantId);
+
+        if (!variant) {
+            return res.status(404).json({ message: 'Variant not found' });
+        }
+
+        // Set the 'available' field to false for the variant
+        variant.available = false;
+
+        // Save the updated product
+        await product.save();
+
+        return res.status(200).json({ message: 'Variant availability updated successfully', product });
+    } catch (err) {
+        return res.status(500).json({ message: 'Server error', error: err.message });
+    }
+};
 
 exports.getSingleProduct = async (req, res) => {
     try {
