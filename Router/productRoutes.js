@@ -18,7 +18,8 @@ const {
     deleteOrdersByCategory,
     updateProductMedia,
     updateProduct,
-    deleteProduct
+    deleteProduct,
+    getOrder
 } = require('../Controller/productController');
 
 // ✅ Product Routes
@@ -40,5 +41,6 @@ router.put('/update/order', updateOrderStatus);     // Update order status
 router.get('/grouped-orders', getOrdersGrouped);    // Grouped & sorted orders
 router.get('/all/grouped-orders', getAllOrdersList);    // Grouped & sorted orders
 router.delete('/deleteOrdersByCtgr', deleteOrdersByCategory);  // Delete orders by category
+router.get('/get-to-order', getOrder);
 
 module.exports = router;

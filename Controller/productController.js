@@ -294,7 +294,7 @@ exports.getCart = async (req, res) => {
 
         const productMap = {};
         console.log(cart);
-        
+
         for (const item of cart.items) {
             const product = item.productId;
             if (!product) continue;
@@ -339,6 +339,60 @@ exports.getCart = async (req, res) => {
     }
 };
 
+exports.getOrder = async (req, res) => {
+    try {
+        const { userId } = req.query;
+        const cart = await Order.findOne({ userId }).populate('items.productId');
+
+        if (!cart || !cart.items.length) {
+            return res.status(404).json({ success: false, message: "Order is empty." });
+        }
+
+        const productMap = {};
+
+        for (const item of cart.items) {
+            const product = item.productId;
+            if (!product) continue;
+
+            const productIdStr = product._id.toString();
+
+            if (!productMap[productIdStr]) {
+                const { __v, ...productData } = product.toObject();
+                productMap[productIdStr] = {
+                    ...productData,
+                    variants: product.variants
+                        .filter(v => v.available)
+                        .map(v => ({
+                            _id: v._id,
+                            name: v.name,
+                            setSize: v.setSize,
+                            quantity: 0
+                        }))
+                };
+            }
+
+            // Add quantity to correct variant
+            const variantList = productMap[productIdStr].variants;
+            const variantIndex = variantList.findIndex(v => v.name === item.variantName);
+            if (variantIndex !== -1) {
+                variantList[variantIndex].quantity += item.quantity;
+            } else {
+                console.warn(`Variant ${item.variantName} not found for product ${product.code}`);
+            }
+        }
+
+        const responseCart = Object.values(productMap);
+
+        res.status(200).json({
+            success: true,
+            cart: responseCart
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+};
 
 // exports.getOrdersGrouped = async (req, res) => {
 //     try {
