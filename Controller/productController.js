@@ -341,8 +341,8 @@ exports.getCart = async (req, res) => {
 
 exports.getOrder = async (req, res) => {
     try {
-        const { userId } = req.query;
-        const cart = await Order.findOne({ userId }).populate('items.productId');
+        const { userId,orderId } = req.query;
+        const cart = await Order.findOne({ userId, orderId }).populate('items.productId');
 
         if (!cart || !cart.items.length) {
             return res.status(404).json({ success: false, message: "Order is empty." });
