@@ -55,12 +55,12 @@ exports.loginUser = async (req, res) => {
 
         const user = await User.findOne({ mobile });
         if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
+            return res.status(201).json({ success: false, message: 'User not found' });
         }
 
         const isMatch = await bcrypt.compare(pin, user.pin);
         if (!isMatch) {
-            return res.status(401).json({ success: false, message: 'Invalid credentials' });
+            return res.status(201).json({ success: false, message: 'Invalid credentials' });
         }
 
         res.status(200).json({
