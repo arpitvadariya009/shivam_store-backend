@@ -667,6 +667,7 @@ exports.getAllOrdersList = async (req, res) => {
 
                 formattedOrders.push({
                     orderId: order._id,
+                    note : order.note,
                     date: order.date,
                     city: order.userId?.city || 'Unknown',
                     firmName: order.userId?.firmName || 'Unknown',
