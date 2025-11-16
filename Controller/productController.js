@@ -672,6 +672,7 @@ exports.getAllOrdersList = async (req, res) => {
                     city: order.userId?.city || 'Unknown',
                     firmName: order.userId?.firmName || 'Unknown',
                     category: item.categoryId?.name || 'Unknown',
+                    colorCode : item.categoryId?.colorCode,
                     productName: item.productId?.name || 'Unknown',
                     productCode: item.productCode || 'Unknown',
                     variantName: item.variantName,
