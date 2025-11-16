@@ -321,7 +321,6 @@ exports.getCart = async (req, res) => {
         }
 
         const productMap = {};
-        console.log(cart);
 
         for (const item of cart.items) {
             const product = item.productId;
@@ -330,23 +329,18 @@ exports.getCart = async (req, res) => {
             const productIdStr = product._id.toString();
 
             if (!productMap[productIdStr]) {
-                const { __v, ...productData } = product.toObject();
                 productMap[productIdStr] = {
-                    ...productData,
-                    variants: product.variants
-                        .filter(v => v.available)
-                        .map(v => ({
-                            _id: v._id,
-                            name: v.name,
-                            setSize: v.setSize,
-                            quantity: 0
-                        }))
+                    ...product.toObject(),      
+                    variants: product.variants.map(v => ({
+                        ...v.toObject(),
+                        quantity: 0              
+                    }))
                 };
             }
 
-            // Add quantity to correct variant
             const variantList = productMap[productIdStr].variants;
             const variantIndex = variantList.findIndex(v => v.name === item.variantName);
+
             if (variantIndex !== -1) {
                 variantList[variantIndex].quantity += item.quantity;
             } else {
@@ -354,11 +348,9 @@ exports.getCart = async (req, res) => {
             }
         }
 
-        const responseCart = Object.values(productMap);
-
         res.status(200).json({
             success: true,
-            cart: responseCart
+            cart: Object.values(productMap)
         });
 
     } catch (err) {
