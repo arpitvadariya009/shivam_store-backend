@@ -330,10 +330,10 @@ exports.getCart = async (req, res) => {
 
             if (!productMap[productIdStr]) {
                 productMap[productIdStr] = {
-                    ...product.toObject(),      
+                    ...product.toObject(),
                     variants: product.variants.map(v => ({
                         ...v.toObject(),
-                        quantity: 0              
+                        quantity: 0
                     }))
                 };
             }
@@ -551,6 +551,7 @@ exports.placeOrder = async (req, res) => {
             userId,
             date: today,
             items: cart.items,
+            note: req.body.note,
             totalQuantity: cart.totalQuantity,
             status: 0, // default pending
         });
