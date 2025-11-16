@@ -379,8 +379,9 @@ exports.getOrder = async (req, res) => {
                         // .filter(v => v.available)
                         .map(v => ({
                             _id: v._id,
-                            name: v.name,
-                            setSize: v.setSize,
+                            name: v?.name,
+                            setSize: v?.setSize,
+                            available : v?.available,
                             quantity: 0
                         }))
                 };
