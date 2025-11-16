@@ -269,7 +269,7 @@ exports.updateCartItem = async (req, res) => {
             return res.status(400).json({ success: false, message: "Increment cannot be zero." });
         }
 
-        const cart = await Cart.findOne({ userId, date: today });
+        const cart = await Cart.findOne({ userId });
         if (!cart) {
             return res.status(404).json({ success: false, message: "Cart not found." });
         }
