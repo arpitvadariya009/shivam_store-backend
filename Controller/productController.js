@@ -640,7 +640,7 @@ exports.getAllOrdersList = async (req, res) => {
         const orders = await Order.find(filter)
             .populate('userId', 'firmName city')
             .populate('items.productId', 'name')
-            .populate('items.categoryId', 'name')
+            .populate('items.categoryId', 'name colorCode')
             .sort({ createdAt: -1 });
 
         if (!orders.length) {
