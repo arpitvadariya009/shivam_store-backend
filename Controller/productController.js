@@ -376,7 +376,7 @@ exports.getOrder = async (req, res) => {
                 productMap[productIdStr] = {
                     ...productData,
                     variants: product.variants
-                        .filter(v => v.available)
+                        // .filter(v => v.available)
                         .map(v => ({
                             _id: v._id,
                             name: v.name,
