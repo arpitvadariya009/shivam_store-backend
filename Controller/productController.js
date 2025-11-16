@@ -122,6 +122,47 @@ exports.createProducts = async (req, res) => {
         });
     }
 };
+
+// exports.getProductsBySubCategoryId = async (req, res) => {
+//     try {
+//         const { subCategoryId, userId } = req.query;
+
+//         if (!subCategoryId) {
+//             return res.status(400).json({ success: false, error: 'subCategoryId is required' });
+//         }
+
+//         // Fetch all products of the subcategory
+//         const products = await Product.find({ subCategoryId });
+
+//         let favoriteProductIds = [];
+
+//         if (userId) {
+//             // Get favorite products for the user
+//             const favorites = await Favorite.find({ userId }).select('productId');
+//             favoriteProductIds = favorites.map(fav => fav.productId.toString());
+//         }
+
+//         // Add isFavorite field to each product
+//         const updatedProducts = products.map(product => {
+//             const isFavorite = favoriteProductIds.includes(product._id.toString());
+//             return {
+//                 ...product.toObject(),
+//                 isFavorite
+//             };
+//         });
+
+//         res.status(200).json({
+//             success: true,
+//             message: 'Products fetched successfully',
+//             data: updatedProducts
+//         });
+
+//     } catch (err) {
+//         console.error(err);
+//         res.status(500).json({ error: err.message });
+//     }
+// };
+
 exports.getProductsBySubCategoryId = async (req, res) => {
     try {
         const { subCategoryId, userId } = req.query;
@@ -134,19 +175,49 @@ exports.getProductsBySubCategoryId = async (req, res) => {
         const products = await Product.find({ subCategoryId });
 
         let favoriteProductIds = [];
+        let cartItems = [];
 
         if (userId) {
-            // Get favorite products for the user
+            // Get favorites
             const favorites = await Favorite.find({ userId }).select('productId');
             favoriteProductIds = favorites.map(fav => fav.productId.toString());
+
+            // Get user's cart (active cart only)
+            const cart = await Cart.findOne({ userId, status: 0 });
+
+            if (cart && cart.items) {
+                cartItems = cart.items;
+            }
         }
 
-        // Add isFavorite field to each product
+        // Add isFavorite + variant quantities
         const updatedProducts = products.map(product => {
-            const isFavorite = favoriteProductIds.includes(product._id.toString());
+            const productIdStr = product._id.toString();
+
+            // Check if favorite
+            const isFavorite = favoriteProductIds.includes(productIdStr);
+
+            // Default variant quantities
+            let variantQuantities = {
+                A: 0,
+                B: 0,
+                C: 0,
+                D: 0,
+                E: 0,
+                F: 0
+            };
+
+            // Fill variant quantities from cart
+            cartItems
+                .filter(item => item.productId.toString() === productIdStr)
+                .forEach(item => {
+                    variantQuantities[item.variantName] = item.quantity;
+                });
+
             return {
                 ...product.toObject(),
-                isFavorite
+                isFavorite,
+                variantQuantities   // <-- added here
             };
         });
 
@@ -161,6 +232,7 @@ exports.getProductsBySubCategoryId = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
 exports.updateVariantAvailability = async (req, res) => {
     try {
         const { productId, variantId, available } = req.query;
@@ -381,7 +453,7 @@ exports.getOrder = async (req, res) => {
                             _id: v._id,
                             name: v?.name,
                             setSize: v?.setSize,
-                            available : v?.available,
+                            available: v?.available,
                             quantity: 0
                         }))
                 };
@@ -668,12 +740,12 @@ exports.getAllOrdersList = async (req, res) => {
 
                 formattedOrders.push({
                     orderId: order._id,
-                    note : order.note,
+                    note: order.note,
                     date: order.date,
                     city: order.userId?.city || 'Unknown',
                     firmName: order.userId?.firmName || 'Unknown',
                     category: item.categoryId?.name || 'Unknown',
-                    colorCode : item.categoryId?.colorCode,
+                    colorCode: item.categoryId?.colorCode,
                     productName: item.productId?.name || 'Unknown',
                     productCode: item.productCode || 'Unknown',
                     variantName: item.variantName,
