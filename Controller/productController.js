@@ -182,42 +182,38 @@ exports.getProductsBySubCategoryId = async (req, res) => {
             const favorites = await Favorite.find({ userId }).select('productId');
             favoriteProductIds = favorites.map(fav => fav.productId.toString());
 
-            // Get user's cart (active cart only)
+            // User cart
             const cart = await Cart.findOne({ userId, status: 0 });
-
             if (cart && cart.items) {
                 cartItems = cart.items;
             }
         }
 
-        // Add isFavorite + variant quantities
+        // Build final product list
         const updatedProducts = products.map(product => {
             const productIdStr = product._id.toString();
-
-            // Check if favorite
             const isFavorite = favoriteProductIds.includes(productIdStr);
 
-            // Default variant quantities
-            let variantQuantities = {
-                A: 0,
-                B: 0,
-                C: 0,
-                D: 0,
-                E: 0,
-                F: 0
-            };
+            // Clone product
+            const prodObj = product.toObject();
 
-            // Fill variant quantities from cart
-            cartItems
-                .filter(item => item.productId.toString() === productIdStr)
-                .forEach(item => {
-                    variantQuantities[item.variantName] = item.quantity;
-                });
+            // Inject quantity in variants
+            prodObj.variants = prodObj.variants.map(variant => {
+                const cartItem = cartItems.find(
+                    item =>
+                        item.productId.toString() === productIdStr &&
+                        item.variantName === variant.name
+                );
+
+                return {
+                    ...variant,
+                    quantity: cartItem ? cartItem.quantity : 0  
+                };
+            });
 
             return {
-                ...product.toObject(),
-                isFavorite,
-                variantQuantities   // <-- added here
+                ...prodObj,
+                isFavorite
             };
         });
 
@@ -232,6 +228,7 @@ exports.getProductsBySubCategoryId = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
 
 exports.updateVariantAvailability = async (req, res) => {
     try {
