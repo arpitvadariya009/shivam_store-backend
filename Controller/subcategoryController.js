@@ -1,4 +1,5 @@
 const SubCategory = require('../models/subcategoryModel');
+const Product = require('../models/productModel');
 const { getUploadsUrl } = require('../config/baseUrl');
 
 // Create SubCategory
@@ -78,17 +79,46 @@ exports.updateSubCategory = async (req, res) => {
     }
 };
 
-// Delete SubCategory
+// Delete SubCategory and all associated products
 exports.deleteSubCategory = async (req, res) => {
     try {
-        const deleted = await SubCategory.findByIdAndDelete(req.params.id);
+        const subcategoryId = req.params.id;
 
-        if (!deleted) {
+        const subCategory = await SubCategory.findById(subcategoryId);
+        if (!subCategory) {
             return res.status(404).json({ success: false, message: 'SubCategory not found' });
         }
 
-        res.status(200).json({ success: true, message: 'SubCategory deleted' });
+        const productsToDelete = await Product.find({ subCategoryId: subcategoryId });
+        
+        const fs = require('fs');
+        const path = require('path');
+        let deletedMediaCount = 0;
+        
+        for (const product of productsToDelete) {
+            if (product.media) {
+                const filePath = path.join(__dirname, '../uploads', product.media);
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                    deletedMediaCount++;
+                }
+            }
+        }
+
+        const deletedProductsResult = await Product.deleteMany({ subCategoryId: subcategoryId });
+        
+        await SubCategory.findByIdAndDelete(subcategoryId);
+
+        console.log(`🗑️ Deleted subcategory "${subCategory.name}" with ${deletedProductsResult.deletedCount} products and ${deletedMediaCount} media files`);
+
+        res.status(200).json({ 
+            success: true, 
+            message: `SubCategory "${subCategory.name}" deleted successfully`,
+            deletedProducts: deletedProductsResult.deletedCount,
+            deletedMediaFiles: deletedMediaCount
+        });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server Error', error });
+        console.error('Error deleting subcategory:', error);
+        res.status(500).json({ success: false, message: 'Server Error', error: error.message });
     }
 };
