@@ -18,13 +18,15 @@ const {
     deleteOrdersByCategory,
     updateProductMedia,
     updateProduct,
-    deleteProduct
+    deleteProduct,
+    getUnavailables
 } = require('../Controller/productController');
 
 // ✅ Product Routes
 router.post('/createProducts', upload.array('media'), validateFileSize, createProducts);
 router.get('/get/products', getProductsBySubCategoryId);
 router.get('/product', getSingleProduct);
+router.get('/products/unavailable-variants', getUnavailables);
 router.put('/updateProductMedia/:productId', upload.single('media'), validateFileSize, updateProductMedia);
 router.put('/updateProduct/:productId', updateProduct);
 router.delete('/deleteProduct/:productId', deleteProduct);
