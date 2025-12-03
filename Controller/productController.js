@@ -280,10 +280,48 @@ exports.getSingleProduct = async (req, res) => {
     }
 };
 
+exports.getUnavailables = async (req, res) => {
+    try {
+        // Find all products that have at least one variant with available: false
+        const products = await Product.find({
+            'variants.available': false
+        }).populate('categoryId', 'name').populate('subCategoryId', 'name');
+
+        // Map products to include only unavailable variants info
+        const productsWithUnavailable = products.map(product => {
+            const unavailableVariants = product.variants.filter(v => !v.available);
+            return {
+                _id: product._id,
+                code: product.code,
+                media: product.media,
+                mediaType: product.mediaType,
+                type: product.type,
+                categoryId: product.categoryId,
+                subCategoryId: product.subCategoryId,
+                unavailableVariants: unavailableVariants.map(v => ({
+                    name: v.name,
+                    setSize: v.setSize,
+                    _id: v._id
+                }))
+            };
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'Products with unavailable variants fetched successfully',
+            data: productsWithUnavailable
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+};
+
 exports.addToCart = async (req, res) => {
     try {
         const { userId, productId, categoryId, productCode, variantName, increment = 1 } = req.body;
-        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const today = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
 
         let cart = await Cart.findOne({ userId });
 
@@ -332,7 +370,8 @@ exports.addToCart = async (req, res) => {
 exports.updateCartItem = async (req, res) => {
     try {
         const { userId, productCode, variantName, increment = 1 } = req.body;
-        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const today = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
 
         if (increment === 0) {
             return res.status(400).json({ success: false, message: "Increment cannot be zero." });
@@ -537,7 +576,8 @@ exports.getOrder = async (req, res) => {
 exports.submitCartToOrder = async (req, res) => {
     try {
         const { userId } = req.body;
-        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const today = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
 
         const cart = await Cart.findOne({ userId, date: today });
         if (!cart || cart.items.length === 0) {
@@ -605,7 +645,8 @@ exports.updateOrderStatus = async (req, res) => {
 exports.placeOrder = async (req, res) => {
     try {
         const { userId } = req.body;
-        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const today = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
         const cart = await Cart.findOne({ userId });
 
         if (!cart || cart.items.length === 0) {

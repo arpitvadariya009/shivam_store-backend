@@ -1,10 +1,18 @@
 // models/Product.js
 const mongoose = require('mongoose');
 
-const variantNames = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
-
 const variantSchema = new mongoose.Schema({
-    name: { type: String, enum: variantNames, required: true },
+    name: { 
+        type: String, 
+        required: true,
+        validate: {
+            validator: function(v) {
+                // Only allow alphanumeric characters (letters and numbers)
+                return /^[a-zA-Z0-9]+$/.test(v);
+            },
+            message: props => `${props.value} is not a valid variant name! Only letters and numbers are allowed.`
+        }
+    },
     setSize: { type: Number, default: 1, required: true },
     available: { type: Boolean, default: true }
 });
