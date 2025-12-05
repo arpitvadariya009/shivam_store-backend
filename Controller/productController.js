@@ -207,7 +207,7 @@ exports.getProductsBySubCategoryId = async (req, res) => {
 
                 return {
                     ...variant,
-                    quantity: cartItem ? cartItem.quantity : 0  
+                    quantity: cartItem ? cartItem.quantity : 0
                 };
             });
 
@@ -763,12 +763,15 @@ exports.getAllOrdersList = async (req, res) => {
             });
         }
 
-        const formattedOrders = [];
+        let formattedOrders = [];
+        let categoryMap = new Map();
+        // key = `${orderId}_${categoryName}`
 
         for (const order of orders) {
-            for (const item of order.items) {
-                console.log(item);
 
+            for (const item of order.items) {
+
+                // category filter
                 if (category && category.trim() !== '') {
                     if (!item.categoryId?.name ||
                         item.categoryId.name.toLowerCase() !== category.toLowerCase()) {
@@ -776,13 +779,24 @@ exports.getAllOrdersList = async (req, res) => {
                     }
                 }
 
+                const categoryName = item.categoryId?.name || 'Unknown';
+
+                const key = `${order._id}_${categoryName}`;
+
+                // If already added once → skip next occurrences
+                if (categoryMap.has(key)) {
+                    continue;
+                }
+
+                categoryMap.set(key, true);
+
                 formattedOrders.push({
                     orderId: order._id,
                     note: order.note,
                     date: order.date,
                     city: order.userId?.city || 'Unknown',
                     firmName: order.userId?.firmName || 'Unknown',
-                    category: item.categoryId?.name || 'Unknown',
+                    category: categoryName,
                     colorCode: item.categoryId?.colorCode,
                     productName: item.productId?.name || 'Unknown',
                     productCode: item.productCode || 'Unknown',
@@ -813,6 +827,7 @@ exports.getAllOrdersList = async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 };
+
 
 // ✅ Delete Orders by Category - Remove orders with "Unknown" category
 exports.deleteOrdersByCategory = async (req, res) => {
