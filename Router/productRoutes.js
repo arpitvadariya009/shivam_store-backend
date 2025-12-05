@@ -21,9 +21,7 @@ const {
     deleteProduct,
     getOrder,
     updateVariantAvailability,
-    getUnavailables,
-    getOrder
-} = require('../Controller/productController');
+    getUnavailables } = require('../Controller/productController');
 
 // ✅ Product Routes
 router.post('/createProducts', upload.array('media'), validateFileSize, createProducts);
