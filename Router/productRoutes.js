@@ -19,7 +19,8 @@ const {
     updateProductMedia,
     updateProduct,
     deleteProduct,
-    getUnavailables
+    getUnavailables,
+    getOrder
 } = require('../Controller/productController');
 
 // ✅ Product Routes
@@ -39,6 +40,7 @@ router.get('/get-to-cart', getCart);
 // ✅ Order Routes
 router.post('/place-order', placeOrder);            // NEW - Place order
 router.put('/update/order', updateOrderStatus);     // Update order status
+router.get('/order/:orderId', getOrder);            // Get single order by ID
 router.get('/grouped-orders', getOrdersGrouped);    // Grouped & sorted orders
 router.get('/all/grouped-orders', getAllOrdersList);    // Grouped & sorted orders
 router.delete('/deleteOrdersByCtgr', deleteOrdersByCategory);  // Delete orders by category

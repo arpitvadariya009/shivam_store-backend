@@ -546,6 +546,24 @@ exports.updateOrderStatus = async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 };
+
+// Get single order by ID
+exports.getOrder = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+
+        const order = await Order.findById(orderId).populate('userId', 'firmName city');
+
+        if (!order) {
+            return res.status(404).json({ success: false, message: "Order not found." });
+        }
+
+        res.status(200).json({ success: true, order });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+};
+
 exports.getOrdersGrouped = async (req, res) => {
     try {
         const { userId } = req.query;
