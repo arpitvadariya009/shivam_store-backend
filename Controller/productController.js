@@ -478,6 +478,7 @@ exports.getOrder = async (req, res) => {
             if (!product) continue;
 
             const productIdStr = product._id.toString();
+            console.log(productIdStr)
 
             if (!productMap[productIdStr]) {
                 const { __v, ...productData } = product.toObject();
@@ -688,7 +689,7 @@ exports.updateOrderStatus = async (req, res) => {
 };
 
 // Get single order by ID
-exports.getOrder = async (req, res) => {
+exports.getSingleOrder = async (req, res) => {
     try {
         const { orderId } = req.params;
 
