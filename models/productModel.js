@@ -31,7 +31,7 @@ const productSchema = new mongoose.Schema({
     },
     media: { type: String, required: true },
     mediaType: { type: String, enum: ['image', 'video'], required: true },
-    type: { type: Number, enum: [1, 2, 3, 4, 5, 6], default: 1 },
+    type: { type: Number, default: 1 },
     variants: [variantSchema],
     createdAt: { type: Date, default: Date.now }
 });

@@ -4,7 +4,7 @@ const orderItemSchema = new mongoose.Schema({
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'category', required: true },
     productCode: { type: String, required: true },
-    variantName: { type: String, enum: ['A', 'B', 'C', 'D', 'E', 'F'], required: true },
+    variantName: { type: String, required: true },
     quantity: { type: Number, default: 0 }
 });
 
