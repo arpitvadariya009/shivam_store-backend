@@ -30,15 +30,19 @@ exports.getFavorite = async (req, res) => {
             cartItems = cart.items;
         }
 
-        // Build products with injected cart quantity + isFavorite
-        const products = favoriteData.map(fav => {
-            const product = fav.productId;
-            const productIdStr = product._id.toString();
+        const products = [];
 
+        for (const fav of favoriteData) {
+            const product = fav.productId;
+
+            // If product was deleted OR not found → SKIP safely
+            if (!product) continue;
+
+            const productIdStr = product._id.toString();
             const prodObj = product.toObject();
 
-            // Inject quantity in variants (same logic as your first API)
-            prodObj.variants = prodObj.variants.map(variant => {
+            // Inject variant quantity
+            prodObj.variants = prodObj.variants?.map(variant => {
                 const cartItem = cartItems.find(
                     item =>
                         item.productId.toString() === productIdStr &&
@@ -49,30 +53,31 @@ exports.getFavorite = async (req, res) => {
                     ...variant,
                     quantity: cartItem ? cartItem.quantity : 0
                 };
-            });
+            }) || [];
 
-            return {
+            products.push({
                 ...prodObj,
                 isFavorite: true
-            };
-        });
+            });
+        }
 
-        // Response does NOT change
-        res.status(200).json({
+        // ALWAYS return success (even if empty)
+        return res.status(200).json({
             success: true,
             message: "Fetched successfully",
-            data: products
+            data: products   // <-- empty [] if nothing found
         });
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({
+        return res.status(200).json({
             success: false,
-            message: 'Server Error',
-            error
+            message: "Fetched successfully",
+            data: []        // <-- return empty list instead of 500
         });
     }
 };
+
 
 exports.deleteFavorite = async (req, res) => {
     try {
