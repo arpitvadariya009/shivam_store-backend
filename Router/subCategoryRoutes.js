@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const upload = require("../middleware/fileUpload")
+const checkUserVerified = require("../middleware/checkUserVerified");
 
 const {
     createSubCategory,
@@ -11,10 +12,10 @@ const {
     deleteSubCategory
 } = require('../Controller/subcategoryController');
 
-router.post('/createSubCategory', upload.single("image"), createSubCategory);
-router.get('/getAllSubCategories', getAllSubCategories);
-router.get('/getSubCategoryById', getSubCategoryById);
-router.put('/updateSubCategory/:id', upload.single("image"), updateSubCategory);
-router.delete('/deleteSubCategory/:id', deleteSubCategory);
+router.post('/createSubCategory',checkUserVerified, upload.single("image"), createSubCategory);
+router.get('/getAllSubCategories',checkUserVerified, getAllSubCategories);
+router.get('/getSubCategoryById',checkUserVerified, getSubCategoryById);
+router.put('/updateSubCategory/:id',checkUserVerified, upload.single("image"), updateSubCategory);
+router.delete('/deleteSubCategory/:id',checkUserVerified, deleteSubCategory);
 
 module.exports = router;

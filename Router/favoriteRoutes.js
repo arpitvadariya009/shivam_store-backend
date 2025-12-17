@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const upload = require("../middleware/fileUpload")
+const checkUserVerified = require("../middleware/checkUserVerified");
 
 const {
     createFavorite,
@@ -8,8 +9,8 @@ const {
     deleteFavorite
 } = require('../Controller/favoriteController');
 
-router.post('/createFavorite', createFavorite);
-router.get('/getFavorite', getFavorite);
-router.delete('/deleteFavorite', deleteFavorite);
+router.post('/createFavorite',checkUserVerified, createFavorite);
+router.get('/getFavorite',checkUserVerified, getFavorite);
+router.delete('/deleteFavorite',checkUserVerified, deleteFavorite);
 
 module.exports = router;
