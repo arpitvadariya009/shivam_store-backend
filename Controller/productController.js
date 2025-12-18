@@ -124,14 +124,24 @@ exports.createProducts = async (req, res) => {
 };
 exports.getProductsBySubCategoryId = async (req, res) => {
     try {
-        const { subCategoryId, userId } = req.query;
+                const { subCategoryId, categoryId, userId } = req.query;
 
-        if (!subCategoryId) {
-            return res.status(400).json({ success: false, error: 'subCategoryId is required' });
+        // Must have either subCategoryId or categoryId
+        if (!subCategoryId && !categoryId) {
+            return res.status(400).json({ success: false, error: 'Either subCategoryId or categoryId is required' });
         }
 
-        // Fetch all products of the subcategory
-        const products = await Product.find({ subCategoryId });
+        // Build query filter
+        const filter = {};
+        if (subCategoryId) {
+            filter.subCategoryId = subCategoryId;
+        } else if (categoryId) {
+            filter.categoryId = categoryId;
+        }
+
+        // Fetch all products matching the filter
+        const products = await Product.find(filter);
+
 
         let favoriteProductIds = [];
 
