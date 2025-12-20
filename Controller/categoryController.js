@@ -18,7 +18,8 @@ exports.createCategory = async (req, res) => {
 // Get all categories
 exports.getAllCategories = async (req, res) => {
     try {
-        const categories = await Category.find();
+        const categories = await Category.find().sort({ name: 1 });
+
         res.status(200).json({ success: true, data: categories });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server Error', error });
@@ -45,7 +46,7 @@ exports.updateCategory = async (req, res) => {
         const { name, status, colorCode } = req.body;
 
         // Prepare update data
-        const updateData = { name, status,colorCode };
+        const updateData = { name, status, colorCode };
 
         // If a file is uploaded, include it in the update
         if (req.file) {

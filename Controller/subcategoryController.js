@@ -24,7 +24,7 @@ exports.getAllSubCategories = async (req, res) => {
         if (categoryId) {
             query.categoryId = categoryId
         }
-        const subCategories = await SubCategory.find(query).populate('categoryId', 'name');
+        const subCategories = await SubCategory.find(query).populate('categoryId', 'name').sort({ name: 1 });
         res.status(200).json({ success: true, subCategories });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server Error', error });
