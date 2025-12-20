@@ -75,7 +75,7 @@ exports.loginUser = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
     try {
-        const { userId } = req.query;
+        const { userId, id } = req.query;
         const updateData = req.body;
 
         if (updateData.pin) {
@@ -83,7 +83,7 @@ exports.updateUser = async (req, res) => {
         }
 
         const updatedUser = await User.findByIdAndUpdate(
-            userId,
+            id,
             updateData,
             { new: true }
         );
@@ -139,16 +139,16 @@ exports.getAllUsers = async (req, res) => {
 
 exports.deleteUser = async (req, res) => {
     try {
-        const { userId } = req.query;
+        const { userId, id} = req.query;
 
-        if (!userId) {
+        if (!id) {
             return res.status(400).json({
                 success: false,
                 message: 'User ID is required'
             });
         }
 
-        const deletedUser = await User.findByIdAndDelete(userId);
+        const deletedUser = await User.findByIdAndDelete(id);
 
         if (!deletedUser) {
             return res.status(404).json({

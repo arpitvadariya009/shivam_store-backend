@@ -31,7 +31,6 @@ const checkUserVerified = async (req, res, next) => {
             });
         }
 
-        // 4. Check verification
         if (!user.isverified) {
             return res.status(604).json({
                 success: false,
@@ -39,7 +38,6 @@ const checkUserVerified = async (req, res, next) => {
             });
         }
 
-        // 5. Attach user to request (optional but recommended)
         req.user = user;
 
         next();
