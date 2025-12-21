@@ -166,98 +166,24 @@ exports.createProducts = async (req, res) => {
 exports.getProductsBySubCategoryId = async (req, res) => {
     try {
         const { subCategoryId, userId } = req.query;
-
-        if (!subCategoryId) {
-            return res.status(400).json({
-                success: false,
-                error: 'subCategoryId is required'
-            });
-        }
-
-        // -------------------------------
-        // 1. FETCH PRODUCTS (NATURAL SORT BY CODE)
-        // -------------------------------
-        const products = await Product.aggregate([
-            {
-                $match: {
-                    subCategoryId: new mongoose.Types.ObjectId(subCategoryId)
-                }
-            },
-            {
-                $addFields: {
-                    codeLower: { $toLower: "$code" }
-                }
-            },
-            {
-                $sort: {
-                    codeLower: 1
-                }
-            }
-        ]).collation({
-            locale: 'en',
-            numericOrdering: true
-        });
-
+        if (!subCategoryId) { return res.status(400).json({ success: false, error: 'subCategoryId is required' }); }
+        const products = await Product.find({ subCategoryId }).sort({ code: -1 });
         let favoriteProductIds = [];
         let cartItems = [];
-
-        // -------------------------------
-        // 2. USER-SPECIFIC DATA
-        // -------------------------------
         if (userId) {
             const favorites = await Favorite.find({ userId }).select('productId');
-            favoriteProductIds = favorites.map(f => f.productId.toString());
-
-            const cart = await Cart.findOne({ userId, status: 0 });
-            if (cart && cart.items) {
-                cartItems = cart.items;
-            }
+            favoriteProductIds = favorites.map(fav => fav.productId.toString());
+            const cart = await Cart.findOne({ userId, status: 0 }); if (cart && cart.items) { cartItems = cart.items; }
         }
-
-        // -------------------------------
-        // 3. BUILD FINAL RESPONSE (UNCHANGED STRUCTURE)
-        // -------------------------------
         const updatedProducts = products.map(product => {
-            const productIdStr = product._id.toString();
-            const isFavorite = favoriteProductIds.includes(productIdStr);
-
-            product.variants = product.variants.map(variant => {
-                const cartItem = cartItems.find(
-                    item =>
-                        item.productId.toString() === productIdStr &&
-                        item.variantName === variant.name
-                );
-
-                return {
-                    ...variant,
-                    quantity: cartItem ? cartItem.quantity : 0
-                };
-            });
-
-            delete product.codeLower; // cleanup helper field
-
-            return {
-                ...product,
-                isFavorite
-            };
-        });
-
-        // -------------------------------
-        // 4. RESPONSE (UNCHANGED)
-        // -------------------------------
-        return res.status(200).json({
-            success: true,
-            message: 'Products fetched successfully',
-            data: updatedProducts
-        });
-
-    } catch (err) {
-        console.error(err);
-        return res.status(500).json({
-            success: false,
-            error: err.message
-        });
-    }
+            const productIdStr = product._id.toString(); const isFavorite = favoriteProductIds.includes(productIdStr);
+            const prodObj = product.toObject();
+            prodObj.variants = prodObj.variants.map(variant => {
+                const cartItem = cartItems.find(item => item.productId.toString() === productIdStr && item.variantName === variant.name);
+                return { ...variant, quantity: cartItem ? cartItem.quantity : 0 };
+            }); return { ...prodObj, isFavorite };
+        }); res.status(200).json({ success: true, message: 'Products fetched successfully', data: updatedProducts });
+    } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 };
 
 
