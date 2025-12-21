@@ -168,37 +168,60 @@ exports.getProductsBySubCategoryId = async (req, res) => {
         const { subCategoryId, userId } = req.query;
 
         if (!subCategoryId) {
-            return res.status(400).json({ success: false, error: 'subCategoryId is required' });
+            return res.status(400).json({
+                success: false,
+                error: 'subCategoryId is required'
+            });
         }
 
-        // Fetch all products of the subcategory
-        const products = await Product.find({ subCategoryId }).sort({ code: 1 });
+        // -------------------------------
+        // 1. FETCH PRODUCTS (NATURAL SORT BY CODE)
+        // -------------------------------
+        const products = await Product.aggregate([
+            {
+                $match: {
+                    subCategoryId: new mongoose.Types.ObjectId(subCategoryId)
+                }
+            },
+            {
+                $addFields: {
+                    codeLower: { $toLower: "$code" }
+                }
+            },
+            {
+                $sort: {
+                    codeLower: 1
+                }
+            }
+        ]).collation({
+            locale: 'en',
+            numericOrdering: true
+        });
 
         let favoriteProductIds = [];
         let cartItems = [];
 
+        // -------------------------------
+        // 2. USER-SPECIFIC DATA
+        // -------------------------------
         if (userId) {
-            // Get favorites
             const favorites = await Favorite.find({ userId }).select('productId');
-            favoriteProductIds = favorites.map(fav => fav.productId.toString());
+            favoriteProductIds = favorites.map(f => f.productId.toString());
 
-            // User cart
             const cart = await Cart.findOne({ userId, status: 0 });
             if (cart && cart.items) {
                 cartItems = cart.items;
             }
         }
 
-        // Build final product list
+        // -------------------------------
+        // 3. BUILD FINAL RESPONSE (UNCHANGED STRUCTURE)
+        // -------------------------------
         const updatedProducts = products.map(product => {
             const productIdStr = product._id.toString();
             const isFavorite = favoriteProductIds.includes(productIdStr);
 
-            // Clone product
-            const prodObj = product.toObject();
-
-            // Inject quantity in variants
-            prodObj.variants = prodObj.variants.map(variant => {
+            product.variants = product.variants.map(variant => {
                 const cartItem = cartItems.find(
                     item =>
                         item.productId.toString() === productIdStr &&
@@ -211,13 +234,18 @@ exports.getProductsBySubCategoryId = async (req, res) => {
                 };
             });
 
+            delete product.codeLower; // cleanup helper field
+
             return {
-                ...prodObj,
+                ...product,
                 isFavorite
             };
         });
 
-        res.status(200).json({
+        // -------------------------------
+        // 4. RESPONSE (UNCHANGED)
+        // -------------------------------
+        return res.status(200).json({
             success: true,
             message: 'Products fetched successfully',
             data: updatedProducts
@@ -225,9 +253,13 @@ exports.getProductsBySubCategoryId = async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: err.message });
+        return res.status(500).json({
+            success: false,
+            error: err.message
+        });
     }
 };
+
 
 
 exports.updateVariantAvailability = async (req, res) => {
