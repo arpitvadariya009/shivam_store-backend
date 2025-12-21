@@ -172,7 +172,7 @@ exports.getProductsBySubCategoryId = async (req, res) => {
         }
 
         // Fetch all products of the subcategory
-        const products = await Product.find({ subCategoryId });
+        const products = await Product.find({ subCategoryId }).sort({ code: 1 });
 
         let favoriteProductIds = [];
         let cartItems = [];
