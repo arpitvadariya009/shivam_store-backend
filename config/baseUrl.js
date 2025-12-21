@@ -13,7 +13,7 @@ const getBaseUrl = () => {
   }
   
   // In production, use the production URL
-  return 'https://yummyburp.in';
+  return 'https://shivamapi.yummyburp.in';
 };
 
 const getUploadsUrl = (filename) => {
