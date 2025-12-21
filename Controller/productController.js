@@ -167,7 +167,7 @@ exports.getProductsBySubCategoryId = async (req, res) => {
     try {
         const { subCategoryId, userId } = req.query;
         if (!subCategoryId) { return res.status(400).json({ success: false, error: 'subCategoryId is required' }); }
-        const products = await Product.find({ subCategoryId }).sort({ code: -1 });
+        const products = await Product.find({ subCategoryId }).sort({ code: 1 });
         let favoriteProductIds = [];
         let cartItems = [];
         if (userId) {
