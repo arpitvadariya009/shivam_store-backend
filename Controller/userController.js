@@ -139,7 +139,7 @@ exports.getAllUsers = async (req, res) => {
 
 exports.deleteUser = async (req, res) => {
     try {
-        const { userId, id} = req.query;
+        const { userId, id } = req.query;
 
         if (!id) {
             return res.status(400).json({
@@ -166,6 +166,25 @@ exports.deleteUser = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to delete user',
+            error: error.message
+        });
+    }
+};
+
+exports.getUser = async (req, res) => {
+    try {
+        const { userId } = req.query;
+        const users = await User.findById(userId);
+
+        res.status(200).json({
+            success: true,
+            message: 'Users fetched successfully',
+            data: users
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch users',
             error: error.message
         });
     }
