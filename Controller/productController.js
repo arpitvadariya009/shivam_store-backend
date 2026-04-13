@@ -477,6 +477,41 @@ exports.getOrder = async (req, res) => {
     }
 };
 
+exports.deleteOrder = async (req, res) => {
+    try {
+        const { orderId } = req.query;
+
+        if (!orderId) {
+            return res.status(400).json({
+                success: false,
+                message: "orderId is required"
+            });
+        }
+
+        const deletedOrder = await Order.findByIdAndDelete(orderId);
+
+        if (!deletedOrder) {
+            return res.status(404).json({
+                success: false,
+                message: "Order not found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Order deleted successfully",
+            order: deletedOrder
+        });
+
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({
+            success: false,
+            error: err.message
+        });
+    }
+};
+
 // exports.getOrdersGrouped = async (req, res) => {
 //     try {
 //         const { userId } = req.query;
@@ -650,16 +685,41 @@ exports.updateOrderStatus = async (req, res) => {
 exports.getSingleOrder = async (req, res) => {
     try {
         const { orderId } = req.params;
+        const { categoryId } = req.query; // 👈 pass in query
 
-        const order = await Order.findById(orderId).populate('userId', 'firmName city');
+        const order = await Order.findById(orderId)
+            .populate('userId', 'firmName city');
 
         if (!order) {
-            return res.status(404).json({ success: false, message: "Order not found." });
+            return res.status(404).json({
+                success: false,
+                message: "Order not found."
+            });
         }
 
-        res.status(200).json({ success: true, order });
+        let filteredItems = order.items;
+
+        // ✅ Apply filter only if categoryId is provided
+        if (categoryId) {
+            filteredItems = order.items.filter(item =>
+                item.categoryId.toString() === categoryId
+            );
+        }
+
+        // ✅ Return modified response
+        res.status(200).json({
+            success: true,
+            order: {
+                ...order.toObject(),
+                items: filteredItems
+            }
+        });
+
     } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
+        res.status(500).json({
+            success: false,
+            error: err.message
+        });
     }
 };
 

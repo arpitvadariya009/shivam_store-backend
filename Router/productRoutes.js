@@ -23,6 +23,7 @@ const {
     getOrder,
     getSingleOrder,
     updateVariantAvailability,
+    deleteOrder,
     getUnavailables } = require('../Controller/productController');
 
 // ✅ Product Routes
@@ -48,5 +49,6 @@ router.get('/all/grouped-orders', checkUserVerified, getAllOrdersList);    // Gr
 router.delete('/deleteOrdersByCtgr', checkUserVerified, deleteOrdersByCategory);  // Delete orders by category
 router.get('/get-to-order', checkUserVerified, getOrder);
 router.get('/get-to-available', checkUserVerified, updateVariantAvailability);
+router.delete('/delete/order', checkUserVerified, deleteOrder);
 
 module.exports = router;

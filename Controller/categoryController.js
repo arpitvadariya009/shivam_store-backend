@@ -18,11 +18,57 @@ exports.createCategory = async (req, res) => {
 // Get all categories
 exports.getAllCategories = async (req, res) => {
     try {
-        const categories = await Category.find().sort({ name: 1 });
+        const categories = await Category.aggregate([
+            {
+                $lookup: {
+                    from: "subcategories",
+                    localField: "_id",
+                    foreignField: "categoryId",
+                    as: "subcategories"
+                }
+            },
+            {
+                $lookup: {
+                    from: "products",
+                    let: { subCatIds: "$subcategories._id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $in: ["$subCategoryId", "$$subCatIds"]
+                                }
+                            }
+                        }
+                    ],
+                    as: "products"
+                }
+            },
+            {
+                $addFields: {
+                    productCount: { $size: "$products" }
+                }
+            },
+            {
+                $project: {
+                    products: 0 // remove products array (optional)
+                }
+            },
+            {
+                $sort: { name: 1 }
+            }
+        ]);
 
-        res.status(200).json({ success: true, data: categories });
+        res.status(200).json({
+            success: true,
+            data: categories
+        });
+
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server Error', error });
+        res.status(500).json({
+            success: false,
+            message: 'Server Error',
+            error
+        });
     }
 };
 
