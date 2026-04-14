@@ -3,6 +3,7 @@ const Cart = require('../models/cartModel');
 const Order = require('../models/orderModel');
 const Favorite = require('../models/favoriteModel');
 const { detectMediaType } = require('../middleware/mediaUpload');
+const Category = require('../models/categoryModel');
 
 exports.createProducts = async (req, res) => {
     try {
@@ -420,47 +421,81 @@ exports.getCart = async (req, res) => {
     }
 };
 
+
 exports.getOrder = async (req, res) => {
     try {
-        const { orderId } = req.query;
-        const cart = await Order.findById(orderId).populate('items.productId');
+        const { orderId, categoryName } = req.query;
+
+        const cart = await Order.findById(orderId)
+            .populate('items.productId');
 
         if (!cart || !cart.items.length) {
-            return res.status(404).json({ success: false, message: "Order is empty." });
+            return res.status(404).json({
+                success: false,
+                message: "Order is empty."
+            });
+        }
+
+        let filteredItems = cart.items;
+
+        // ✅ If categoryName is provided → find categoryId
+        if (categoryName) {
+            const category = await Category.findOne({
+                name: { $regex: `^${categoryName}$`, $options: 'i' } // case-insensitive
+            });
+
+            if (!category) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Category not found"
+                });
+            }
+
+            const categoryId = category._id.toString();
+
+            filteredItems = cart.items.filter(
+                item => item.categoryId.toString() === categoryId
+            );
+        }
+
+        if (!filteredItems.length) {
+            return res.status(404).json({
+                success: false,
+                message: "No items found for this category."
+            });
         }
 
         const productMap = {};
 
-        for (const item of cart.items) {
+        for (const item of filteredItems) {
             const product = item.productId;
             if (!product) continue;
 
             const productIdStr = product._id.toString();
-            console.log(productIdStr)
 
             if (!productMap[productIdStr]) {
                 const { __v, ...productData } = product.toObject();
+
                 productMap[productIdStr] = {
                     ...productData,
-                    variants: product.variants
-                        // .filter(v => v.available)
-                        .map(v => ({
-                            _id: v._id,
-                            name: v?.name,
-                            setSize: v?.setSize,
-                            available: v?.available,
-                            quantity: 0
-                        }))
+                    variants: product.variants.map(v => ({
+                        _id: v._id,
+                        name: v?.name,
+                        setSize: v?.setSize,
+                        available: v?.available,
+                        quantity: 0
+                    }))
                 };
             }
 
-            // Add quantity to correct variant
             const variantList = productMap[productIdStr].variants;
-            const variantIndex = variantList.findIndex(v => v.name === item.variantName);
+
+            const variantIndex = variantList.findIndex(
+                v => v.name === item.variantName
+            );
+
             if (variantIndex !== -1) {
                 variantList[variantIndex].quantity += item.quantity;
-            } else {
-                console.warn(`Variant ${item.variantName} not found for product ${product.code}`);
             }
         }
 
@@ -473,7 +508,10 @@ exports.getOrder = async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        res.status(500).json({ success: false, error: err.message });
+        res.status(500).json({
+            success: false,
+            error: err.message
+        });
     }
 };
 
